@@ -224,13 +224,22 @@ class MongoConnector:
         pipeline = [
             {'$project': {'fields': {'$objectToArray': '$$ROOT'}}},
             {'$unwind': '$fields'},
-            {'$match': {'fields.k': {'$nin': excluded_fields}}},
+            # Add field type
+            {'$addFields': {
+                'field_type': {'$type': '$fields.v'}
+            }},
+            # Filter out excluded fields and exclude date and object types
+            {'$match': {
+                'fields.k': {'$nin': excluded_fields},
+                'field_type': {'$nin': ['date', 'object']}
+            }},
             {'$group': {
                 '_id': '$fields.k',
                 'values': {'$addToSet': '$fields.v'},
             }},
             {'$sort': {'_id': 1}},
         ]
+
         return collection.aggregate(pipeline)
 
     def create_entities(self, entities: list[dict[str, Any]]) -> Mapping:
