@@ -1,0 +1,268 @@
+# MCP Tools Verification and Testing Rule
+
+## Overview
+This rule establishes mandatory requirements for verifying and testing MCP tools after any code changes.
+
+## Requirements
+
+### 1. Initial Server Verification
+
+#### 1.1 Server Connection Check
+```python
+def verify_server_connection():
+    """Verify MCP server connection and available tools.
+    
+    Returns:
+        dict: Server status and available tools list
+    """
+    try:
+        # Get usage guide to verify basic connectivity
+        guide = mcp_MongoMemory_get_usage_guide()
+        return {
+            "status": "connected",
+            "guide_available": bool(guide)
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e)
+        }
+```
+
+### 2. Tools Verification Process
+
+#### 2.1 Entity Management Tests
+```python
+def test_entity_operations():
+    """Test basic entity CRUD operations.
+    
+    Tests:
+        - Create single/multiple entities
+        - Get entity by name
+        - Update entity
+        - Delete entity
+        - Find entities
+    """
+    test_cases = [
+        # Empty entity
+        {"name": "test_empty", "data": {}},
+        # Basic entity
+        {"name": "test_basic", "data": {"field": "value"}},
+        # Complex entity
+        {"name": "test_complex", "data": {
+            "nested": {"field": "value"},
+            "array": [1, 2, 3],
+            "null": None
+        }}
+    ]
+    
+    results = []
+    for case in test_cases:
+        try:
+            # Create
+            create_result = mcp_MongoMemory_create_entities([case])
+            # Get
+            get_result = mcp_MongoMemory_get_entity(case["name"])
+            # Update
+            update_result = mcp_MongoMemory_update_entity(
+                case["name"],
+                {"$set": {"updated": True}}
+            )
+            # Find
+            find_result = mcp_MongoMemory_find_entities(
+                {"name": case["name"]}
+            )
+            # Delete
+            delete_result = mcp_MongoMemory_delete_entity(case["name"])
+            
+            results.append({
+                "case": case["name"],
+                "status": "success",
+                "operations": {
+                    "create": create_result,
+                    "get": get_result,
+                    "update": update_result,
+                    "find": find_result,
+                    "delete": delete_result
+                }
+            })
+        except Exception as e:
+            results.append({
+                "case": case["name"],
+                "status": "error",
+                "error": str(e)
+            })
+    
+    return results
+```
+
+#### 2.2 Relationship Tests
+```python
+def test_relationships():
+    """Test relationship creation and verification.
+    
+    Tests:
+        - Create entities with relationships
+        - Verify relationship properties
+        - Test invalid relationships
+    """
+    test_cases = [
+        # Basic relationship
+        {
+            "from": "entity1",
+            "to": "entity2",
+            "type": "knows"
+        },
+        # Relationship with properties
+        {
+            "from": "employee",
+            "to": "company",
+            "type": "works_at:position=developer,department=IT"
+        },
+        # Invalid relationship (missing entity)
+        {
+            "from": "invalid",
+            "to": "nonexistent",
+            "type": "test"
+        }
+    ]
+    
+    results = []
+    for case in test_cases:
+        try:
+            # Create entities
+            mcp_MongoMemory_create_entities([
+                {"name": case["from"], "data": {}},
+                {"name": case["to"], "data": {}}
+            ])
+            
+            # Create relationship
+            rel_result = mcp_MongoMemory_create_relationship(
+                case["from"],
+                case["to"],
+                case["type"]
+            )
+            
+            results.append({
+                "case": f"{case['from']}->{case['to']}",
+                "status": "success",
+                "result": rel_result
+            })
+        except Exception as e:
+            results.append({
+                "case": f"{case['from']}->{case['to']}",
+                "status": "error",
+                "error": str(e)
+            })
+            
+        # Cleanup
+        mcp_MongoMemory_delete_entity(case["from"])
+        mcp_MongoMemory_delete_entity(case["to"])
+    
+    return results
+```
+
+### 3. Results Analysis
+
+#### 3.1 Test Results Format
+```python
+def format_test_results(results: dict) -> str:
+    """Format test results for user presentation.
+    
+    Args:
+        results: Dictionary containing test results
+        
+    Returns:
+        str: Formatted results summary
+    """
+    summary = """
+Test Results Summary:
+--------------------
+Server Status: {status}
+Total Tests: {total}
+Successful: {success}
+Failed: {failed}
+
+Detailed Results:
+{details}
+
+Error Report:
+{errors}
+    """.format(
+        status=results["server_status"],
+        total=results["total_tests"],
+        success=results["successful_tests"],
+        failed=results["failed_tests"],
+        details=results["test_details"],
+        errors=results["error_report"]
+    )
+    return summary
+```
+
+### 4. Error Handling
+
+#### 4.1 Error Categories
+- Connection Errors
+- Tool Invocation Errors
+- Data Validation Errors
+- Unexpected Responses
+
+#### 4.2 Error Response Format
+```python
+{
+    "tool": "tool_name",
+    "request": {
+        "method": "method_name",
+        "parameters": {...}
+    },
+    "response": {
+        "status": "error",
+        "message": "error_message",
+        "details": "stack_trace"
+    },
+    "resolution": {
+        "type": "action_required|automatic",
+        "steps": ["step1", "step2"],
+        "file": "rule_file_name.mdc"
+    }
+}
+```
+
+### 5. Compliance Requirements
+
+#### 5.1 Execution Requirements
+- MUST run after ANY code changes
+- MUST verify ALL available tools
+- MUST test with various data sets
+- MUST document ALL test results
+
+#### 5.2 Documentation Requirements
+- Test results MUST be logged
+- Errors MUST be documented
+- Resolution steps MUST be provided
+- Performance metrics MUST be recorded
+
+## Implementation Example
+
+```python
+def run_full_verification():
+    """Execute complete tools verification process."""
+    results = {
+        "server_status": verify_server_connection(),
+        "entity_tests": test_entity_operations(),
+        "relationship_tests": test_relationships()
+    }
+    
+    return format_test_results(results)
+```
+
+## Non-compliance
+Failure to follow these requirements will result in:
+- Unreliable tool functionality
+- Undiscovered bugs
+- Inconsistent behavior
+- Poor user experience
+
+## Related Rules
+- 0001-mongo-memory-usage.mdc
+- 3001-mcp-server-verification.mdc

@@ -1,0 +1,125 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Main MDC Rules Documentation
+
+## General MDC File Requirements
+
+1. **Language**: All MDC files MUST be written in English only
+2. **File Naming Convention**: 
+   - Format: `XXXX-name.mdc` where:
+     - XXXX: Four-digit code indicating the rule category
+     - name: Descriptive name in lowercase with hyphens
+   - Category Codes:
+     - 0000: Core/Main rules
+     - 1000: Development rules
+     - 2000: Documentation rules
+     - 3000: Testing rules
+     - 4000: Code style rules
+     - 5000: Infrastructure rules
+     - 6000: Security rules
+     - 7000: Performance rules
+     - 8000: Integration rules
+     - 9000: Miscellaneous rules
+
+## MDC Rules Structure
+
+1. **Core Rules** (0000-series):
+   - Main principles and guidelines
+   - References to other rule categories
+   - Global requirements and standards
+
+2. **Development Rules** (1000-series):
+   - Code development and modifications
+   - Feature development process
+   - Code review requirements
+   - Version control guidelines
+
+3. **Documentation Rules** (2000-series):
+   - Documentation format and standards
+   - Required sections and templates
+   - Update processes and procedures
+   - API documentation requirements
+
+4. **Testing Rules** (3000-series):
+   - Unit testing requirements
+   - Integration testing standards
+   - MCP server verification procedures
+   - Test coverage requirements
+
+5. **Code Style Rules** (4000-series):
+   - Code formatting standards
+   - Naming conventions
+   - Comments format and requirements
+   - Code organization guidelines
+
+6. **Infrastructure Rules** (5000-series):
+   - Deployment procedures
+   - Environment setup
+   - Configuration management
+   - Build process requirements
+
+7. **Security Rules** (6000-series):
+   - Security best practices
+   - Access control requirements
+   - Data protection standards
+   - Security review procedures
+
+8. **Performance Rules** (7000-series):
+   - Performance requirements
+   - Optimization guidelines
+   - Monitoring standards
+   - Benchmarking procedures
+
+9. **Integration Rules** (8000-series):
+   - Third-party integration standards
+   - API integration requirements
+   - Service communication guidelines
+   - Integration testing procedures
+
+10. **Miscellaneous Rules** (9000-series):
+    - Additional guidelines
+    - Special case handling
+    - Project-specific requirements
+
+## MCP Service Testing Requirements
+
+1. **Testing Process**:
+   - Verify functionality on connected MCP server
+   - Monitor server response and performance
+   - Document test results and issues
+
+2. **Issue Handling**:
+   - If server unavailable or fails:
+     - Report issue to responsible team
+     - Identify root cause
+     - Implement fix
+     - Re-verify functionality
+   - Document all issues and resolutions
+
+3. **Verification**:
+   - All changes must pass MCP server verification
+   - Changes affecting multiple components require full integration testing
+   - Performance impact must be assessed
+
+## Documentation Requirements
+
+1. **Update Process**:
+   - Update all affected documentation
+   - Include function and method descriptions
+   - Add or update usage examples
+   - Update development plan status
+   - Revise technical specifications
+
+2. **Quality Standards**:
+   - Documentation must reflect current code state
+   - All examples must be tested and verified
+   - Clear and concise language required
+   - Include version history
+
+3. **Completion Criteria**:
+   - Changes are complete only after documentation update
+   - Documentation must pass review process
+   - All related MDC files must be consistent

@@ -1,0 +1,70 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# MCP Server Verification Steps
+
+## Overview
+This rule defines the exact sequence of verification steps that must be performed after any code changes.
+
+## Verification Steps
+
+### 1. Server Health Check
+1. Check server accessibility:
+   ```python
+   mcp_jetbrains_get_run_configurations()
+   mcp_jetbrains_run_configuration("main")
+   ```
+
+2. Verify basic functionality:
+   ```python
+   mcp_mongo_memory_create_entities()
+   mcp_mongo_memory_read_graph()
+   ```
+
+### 2. Performance Check
+1. Measure response time for basic operations:
+   - Entity creation
+   - Entity retrieval
+   - Graph reading
+2. Compare with baseline metrics:
+   - Creation: < 1000ms
+   - Retrieval: < 500ms
+   - Reading: < 2000ms
+
+### 3. Error Handling Check
+1. Test error scenarios:
+   - Invalid entity format
+   - Duplicate entities
+   - Missing required fields
+2. Verify error responses are correct
+3. Check error logging
+
+### 4. Documentation
+For each verification:
+1. Record timestamp
+2. Document test results
+3. Note any issues
+4. Track resolution steps
+
+### 5. Compliance Requirements
+- ALL steps must pass before completing task
+- ANY failures must be documented
+- Performance degradation must be investigated
+- Error handling must be verified
+
+## Implementation
+After ANY code changes:
+1. Run server health check
+2. Execute functionality tests
+3. Verify performance
+4. Document results
+5. Address any issues
+
+## Non-compliance
+If verification fails:
+1. Document failure
+2. Roll back changes
+3. Create incident ticket
+4. Get approval for bypass if needed

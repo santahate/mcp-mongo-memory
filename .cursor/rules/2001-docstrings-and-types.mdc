@@ -1,0 +1,165 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Code Documentation Standards: Docstrings and Type Hints
+
+## Overview
+This rule establishes mandatory requirements for code documentation using docstrings and type hints in all code files.
+
+## Requirements
+
+### 1. Docstrings
+
+#### 1.1 General Requirements
+- Every module, class, method, and function MUST have a docstring
+- Docstrings MUST follow Google style format
+- Docstrings MUST be written in English
+- Multi-line docstrings MUST use triple double-quotes (`"""`)
+
+#### 1.2 Module Docstrings
+```python
+"""
+Module description.
+
+Detailed explanation of module's purpose and functionality.
+"""
+```
+
+#### 1.3 Class Docstrings
+```python
+class ExampleClass:
+    """Short class description.
+
+    Detailed class description that explains its purpose,
+    behavior, and important notes.
+
+    Attributes:
+        attr1 (type): Description of attr1
+        attr2 (type): Description of attr2
+    """
+```
+
+#### 1.4 Method/Function Docstrings
+```python
+def example_function(param1: str, param2: int) -> bool:
+    """Short description of function's purpose.
+
+    Detailed description of what the function does, its behavior,
+    and any important implementation details.
+
+    Args:
+        param1 (str): Description of param1
+        param2 (int): Description of param2
+
+    Returns:
+        bool: Description of return value
+
+    Raises:
+        ValueError: Description of when this error is raised
+        TypeError: Description of when this error is raised
+    """
+```
+
+### 2. Type Hints
+
+#### 2.1 General Requirements
+- All function parameters MUST have type hints
+- All function return values MUST have return type hints
+- All class attributes MUST have type annotations
+- Complex types MUST use types from the `typing` module
+
+#### 2.2 Basic Types
+```python
+def process_data(text: str, count: int) -> bool:
+    pass
+```
+
+#### 2.3 Complex Types
+```python
+from typing import List, Dict, Optional, Union, Tuple
+
+def complex_function(
+    items: List[str],
+    mapping: Dict[str, int],
+    optional_param: Optional[str] = None
+) -> Union[List[str], None]:
+    pass
+```
+
+#### 2.4 Class Attributes
+```python
+class DataProcessor:
+    data: List[str]
+    count: int
+    cache: Optional[Dict[str, Any]]
+```
+
+### 3. Validation and Enforcement
+
+#### 3.1 Static Type Checking
+- All code MUST pass mypy static type checking
+- Zero tolerance for type checking errors
+- Type checking MUST be part of CI/CD pipeline
+
+#### 3.2 Documentation Coverage
+- Documentation coverage MUST be 100%
+- Use tools like `interrogate` to verify docstring coverage
+- Include docstring checking in CI/CD pipeline
+
+### 4. Examples
+
+#### 4.1 Complete Example
+```python
+from typing import List, Optional, Dict, Any
+
+class DataProcessor:
+    """Processes data with various transformations.
+
+    This class provides methods for data transformation,
+    validation, and analysis.
+
+    Attributes:
+        data (List[str]): Raw data to process
+        cache (Dict[str, Any]): Processing cache
+    """
+
+    data: List[str]
+    cache: Dict[str, Any]
+
+    def process_item(self, item: str, flags: Optional[List[str]] = None) -> bool:
+        """Process a single data item.
+
+        Applies configured transformations to the item
+        based on provided flags.
+
+        Args:
+            item (str): Item to process
+            flags (Optional[List[str]]): Processing flags
+
+        Returns:
+            bool: True if processing successful, False otherwise
+
+        Raises:
+            ValueError: If item is empty
+        """
+        pass
+```
+
+## Compliance
+
+### Required Tools
+- interrogate for docstring coverage
+- ruff for style checking
+
+### Verification Process
+1. Run static type checker
+2. Verify docstring coverage
+3. Run style checkers
+4. Code review verification
+
+### Non-compliance
+- Code MUST NOT be merged if it fails any of the above checks
+- No exceptions without explicit approval
+- Technical debt tickets MUST be created for any temporary exceptions 

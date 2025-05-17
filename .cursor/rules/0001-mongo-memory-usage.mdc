@@ -1,0 +1,218 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# MongoDB Memory Usage Requirements
+
+## Overview
+This rule establishes mandatory requirements for using MongoMemory service during all operations and analysis tasks.
+
+## Requirements
+
+### 1. Data Storage Requirements
+
+#### 1.1 Mandatory Information Storage
+MUST store in memory:
+- Code analysis results
+- File structure information
+- User preferences and settings
+- Task context and progress
+- Discovered patterns and relationships
+- Error patterns and solutions
+
+#### 1.2 Storage Format
+```python
+{
+    "name": "<unique_identifier>",
+    "type": "analysis_result",
+    "data": {
+        "timestamp": "<datetime>",
+        "category": "<category>",
+        "content": "<content>",
+        "source": "<source>",
+        "related_files": ["<file_paths>"],
+        "metadata": {
+            "tool_used": "<tool_name>",
+            "confidence": "<float>",
+            "context": "<context>"
+        }
+    }
+}
+```
+
+### 2. Memory Access Protocol
+
+#### 2.1 Before Analysis
+MUST check memory for:
+- Similar previous analyses
+- Related context
+- Known patterns
+- User preferences
+- Previous errors
+
+#### 2.2 During Analysis
+MUST store:
+- Intermediate results
+- Important discoveries
+- File relationships
+- Code patterns
+- Error occurrences
+
+#### 2.3 After Analysis
+MUST update:
+- Final results
+- Success/failure status
+- Time taken
+- Resources used
+- Related entities
+
+### 3. Entity Naming Convention
+
+#### 3.1 Analysis Results
+```
+analysis_<category>_<timestamp>
+```
+
+#### 3.2 File Information
+```
+file_info_<filepath_hash>
+```
+
+#### 3.3 Patterns
+```
+pattern_<type>_<identifier>
+```
+
+#### 3.4 Relationships
+```
+rel_<entity1>_<entity2>
+```
+
+### 4. Required Operations
+
+#### 4.1 Before Each Task
+```python
+def check_existing_knowledge():
+    # Check for similar tasks
+    similar_tasks = memory.find_entities({
+        "type": "analysis_result",
+        "data.category": current_category
+    })
+    
+    # Check for related patterns
+    patterns = memory.find_entities({
+        "type": "pattern",
+        "data.context": current_context
+    })
+    
+    return similar_tasks, patterns
+```
+
+#### 4.2 During Task Execution
+```python
+def store_analysis_result(result: dict):
+    memory.update_entity(
+        f"analysis_{result['category']}_{timestamp}",
+        {"$set": {
+            "type": "analysis_result",
+            "data": {
+                "timestamp": datetime.now(),
+                "content": result,
+                "context": current_context
+            }
+        }},
+        upsert=True
+    )
+```
+
+#### 4.3 Pattern Storage
+```python
+def store_pattern(pattern: dict):
+    memory.update_entity(
+        f"pattern_{pattern['type']}_{pattern['id']}",
+        {"$set": {
+            "type": "code_pattern",
+            "data": {
+                "pattern": pattern,
+                "discovered_at": datetime.now(),
+                "frequency": 1
+            }
+        }},
+        upsert=True
+    )
+```
+
+### 5. Compliance Requirements
+
+#### 5.1 Mandatory Checks
+- MUST check memory before starting analysis
+- MUST verify stored data consistency
+- MUST update related entities
+- MUST maintain relationship graphs
+
+#### 5.2 Data Quality
+- All stored data MUST have timestamps
+- All entities MUST have proper categorization
+- All relationships MUST be bidirectional
+- All patterns MUST have confidence scores
+
+#### 5.3 Performance
+- Memory queries MUST be optimized
+- Batch operations for multiple entities
+- Regular cleanup of obsolete data
+- Index frequently accessed fields
+
+### 6. Error Handling
+
+#### 6.1 Storage Errors
+- Log failed storage attempts
+- Retry critical operations
+- Maintain data consistency
+- Report persistent failures
+
+#### 6.2 Retrieval Errors
+- Use fallback data if available
+- Log missing information
+- Update incomplete records
+- Report systematic issues
+
+## Implementation Examples
+
+### Example 1: Storing Code Analysis
+```python
+def store_code_analysis(file_path: str, analysis_result: dict):
+    memory.update_entity(
+        f"analysis_code_{hash(file_path)}",
+        {"$set": {
+            "type": "code_analysis",
+            "data": {
+                "file_path": file_path,
+                "result": analysis_result,
+                "timestamp": datetime.now(),
+                "tool_version": "1.0"
+            }
+        }},
+        upsert=True
+    )
+```
+
+### Example 2: Checking Previous Analysis
+```python
+def get_previous_analysis(file_path: str) -> dict:
+    return memory.get_entity(f"analysis_code_{hash(file_path)}")
+```
+
+## Non-compliance
+Failure to follow these requirements will result in:
+- Incomplete analysis context
+- Missed optimization opportunities
+- Redundant operations
+- Inconsistent results
+
+## Verification
+Regular audits MUST check:
+- Memory usage patterns
+- Data consistency
+- Relationship integrity
+- Operation efficiency

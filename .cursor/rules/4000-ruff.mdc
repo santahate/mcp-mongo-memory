@@ -1,0 +1,102 @@
+---
+description: 
+globs: *.py
+alwaysApply: false
+---
+# Ruff Code Style and Quality Enforcement
+
+## Overview
+This rule establishes the usage of Ruff as the primary tool for code style checking and enforcement. Ruff must be run after any modifications to Python files to maintain code quality and consistency.
+
+## Requirements
+
+### 1. Tool Installation and Setup
+
+#### 1.1 Installation
+- Ruff MUST be installed in the development environment
+- Installation command: `pip install ruff`
+- Version MUST be specified in requirements.txt or similar dependency management file
+
+#### 1.2 Configuration
+- Ruff configuration MUST be stored in `pyproject.toml` or `ruff.toml`
+- Configuration MUST be version controlled
+- Any changes to configuration require team review
+
+### 2. Usage Requirements
+
+#### 2.1 When to Run
+- After ANY modification to Python files
+- Before committing changes
+- During CI/CD pipeline execution
+- Before submitting pull requests
+
+#### 2.2 Command Usage
+```bash
+# Check all Python files in the project
+ruff check .
+
+# Fix auto-fixable issues
+ruff check . --fix
+```
+
+#### 2.3 Error Handling
+- All Ruff warnings MUST be addressed
+- Auto-fixes MUST be reviewed before committing
+- Non-auto-fixable issues MUST be resolved manually
+- Suppressions MUST be documented with comments explaining why
+
+### 3. Integration with Development Workflow
+
+#### 3.1 IDE Integration
+- IDE MUST be configured to show Ruff warnings in real-time
+- Auto-formatting on save SHOULD be enabled where supported
+
+#### 3.2 Git Hooks
+- Pre-commit hooks SHOULD include Ruff checks
+- Commit SHOULD be blocked if Ruff checks fail
+
+#### 3.3 CI/CD Integration
+- Pipeline MUST include Ruff checks
+- Build MUST fail if Ruff checks fail
+- Results SHOULD be reported in PR comments
+
+### 4. Error Categories and Handling
+
+#### 4.1 Priority Levels
+- Critical: MUST be fixed immediately
+- Major: MUST be fixed before merge
+- Minor: SHOULD be fixed when possible
+
+#### 4.2 Common Issues
+- Import ordering
+- Code formatting
+- Unused imports
+- Variable naming
+- Type annotation issues
+
+#### 4.3 Resolution Process
+1. Run Ruff check
+2. Apply auto-fixes where possible
+3. Manually review and fix remaining issues
+4. Re-run checks to verify
+5. Document any necessary suppressions
+
+## Compliance
+
+### Verification Process
+1. Run `ruff check .`
+2. Review any warnings or errors
+3. Apply necessary fixes
+4. Verify changes haven't introduced new issues
+
+### Non-compliance
+- Code MUST NOT be merged if Ruff checks fail
+- Exceptions require team lead approval
+- Exceptions MUST be documented
+- Technical debt tickets MUST be created for temporary exceptions
+
+### Maintenance
+- Regular reviews of Ruff configuration
+- Updates to rules based on team feedback
+- Documentation of common issues and solutions
+- Training for new team members
