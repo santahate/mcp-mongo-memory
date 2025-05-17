@@ -5,10 +5,13 @@ from typing import Any, Required, TypedDict
 
 from mcp.server import FastMCP
 
-from .constants.usage_guide import user_guide
+from mongo_memory.constants import user_guide, instructions
 from .mongo_connector import MongoConnector
 
-mcp = FastMCP('mongo-memory')
+mcp = FastMCP(
+    name='mongo-memory',
+    instructions=instructions
+)
 db = MongoConnector()
 
 class FindEntitiesParams(TypedDict):
