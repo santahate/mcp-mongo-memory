@@ -1,0 +1,66 @@
+name: Publish to TestPyPI
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    if: "!startsWith(github.event.head_commit.message, 'Bump version:')"
+
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install tooling
+        run: |
+          pip install --upgrade pip
+          pip install bump2version build twine uv
+
+      - name: Calculate next version
+        id: nextver
+        run: |
+          python - <<'PY'
+          import toml, os
+          ver = toml.load('pyproject.toml')['project']['version']
+          major, minor, patch = map(int, ver.split('.'))
+          patch += 1
+          new = f'{major}.{minor}.{patch}'
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
+              fh.write(f'next={new}\n')
+          PY
+
+      - name: Bump, commit & tag
+        env:
+          NEW_VER: ${{ steps.nextver.outputs.next }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          bump2version --new-version "$NEW_VER" patch
+          # пушим одновременно commit и тег
+          git push --follow-tags
+
+      - name: Build dist/
+        run: |
+          rm -rf dist/ build/
+          uv run python -m build
+
+      - name: Upload to Test PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        run: |
+          uv run twine upload \
+            --repository-url https://test.pypi.org/legacy/ \
+            dist/*
