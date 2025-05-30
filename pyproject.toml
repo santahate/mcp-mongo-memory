@@ -30,9 +30,16 @@ packages = ["mongo_memory"]
 exclude = [
   "**/__pycache__",
   "**/*.pyc",
+  "*.pyc",
+  "*.pyo",
+  "*.pyd",
+  "*.so",
+  "*.egg-info",
+  "build",
+  "dist",
+  "venv",
+  ".venv",
   "DEVELOPMENT.md",
-  "run.py",
-  "main.py",
   "requirements.txt",
   "pytest.ini",
   "uv.lock"
