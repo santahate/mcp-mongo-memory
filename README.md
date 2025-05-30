@@ -112,7 +112,7 @@ python -m mongo_memory.cli
 
 ### Using as MCP Service
 
-Add the following configuration to your `~/.cursor/mcp.json`:
+Add the following configuration to your `mcp.json`:
 
 ```json
 {
