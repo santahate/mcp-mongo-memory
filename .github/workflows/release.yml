@@ -32,13 +32,16 @@ jobs:
         id: nextver
         run: |
           python - <<'PY'
-          import toml, os
-          ver = toml.load('pyproject.toml')['project']['version']
-          major, minor, patch = map(int, ver.split('.'))
+          import tomllib, os
+          with open("pyproject.toml", "rb") as f:
+              ver = tomllib.load(f)["project"]["version"]
+
+          major, minor, patch = map(int, ver.split("."))
           patch += 1
-          new = f'{major}.{minor}.{patch}'
-          with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
-              fh.write(f'next={new}\n')
+          new = f"{major}.{minor}.{patch}"
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
+              fh.write(f"next={new}\n")
           PY
 
       - name: Bump, commit & tag
