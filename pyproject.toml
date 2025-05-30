@@ -1,6 +1,6 @@
 [project]
 name = "mongo-memory"
-version = "0.1.4"
+version = "0.1.5"
 description = "MCP-server that implements memory stored in MongoDB"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -26,8 +26,8 @@ dependencies = [
 
 [tool.hatch.build]
 sources = ["src"]
-packages = ["mongo_memory"]
 exclude = [
+  "**/tests",
   "**/__pycache__",
   "**/*.pyc",
   "*.pyc",
@@ -42,7 +42,9 @@ exclude = [
   "DEVELOPMENT.md",
   "requirements.txt",
   "pytest.ini",
-  "uv.lock"
+  "uv.lock",
+  "**/.cursor",
+  "**/.zencoder"
 ]
 
 [tool.hatch.metadata]
