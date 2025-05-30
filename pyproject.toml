@@ -1,6 +1,6 @@
 [project]
 name = "mongo-memory"
-version = "0.1.2"
+version = "0.1.3"
 description = "MCP-server that implements memory stored in MongoDB"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -26,6 +26,7 @@ dependencies = [
 
 [tool.hatch.build]
 sources = ["src"]
+packages = ["mongo_memory"]
 exclude = [
   "**/__pycache__",
   "**/*.pyc",
