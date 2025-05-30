@@ -83,7 +83,7 @@ If you do not already have a MongoDB instance running, you can spin up a **free*
    Export the connection string via the environment variable expected by the server:
 
    ```bash
-   export MCP_NONGO_MEMORY_CONNECTION="mongodb+srv://mcp_user:<password>@cluster0.mongodb.net/mcp_memory?retryWrites=true&w=majority"
+   export MCP_MONGO_MEMORY_CONNECTION="mongodb+srv://mcp_user:<password>@cluster0.mongodb.net/mcp_memory?retryWrites=true&w=majority"
    ```
 
    Keep the quotes around the URI so that special characters are preserved, and **never commit this string to version control**.
@@ -95,7 +95,7 @@ Now you can launch the server as shown in the [Usage](#usage) section.
 Alternatively, you can set the required environment variable directly:
 
 ```
-MCP_NONGO_MEMORY_CONNECTION=mongodb://username:password@host:port/database
+MCP_MONGO_MEMORY_CONNECTION=mongodb://username:password@host:port/database
 ```
 
 ## Usage
@@ -125,7 +125,7 @@ Add the following configuration to your `mcp.json`:
         "mcp-mongo-memory"
     ],
     "env": {
-      "MCP_NONGO_MEMORY_CONNECTION": "mongodb://username:password@host:port/database"
+      "MCP_MONGO_MEMORY_CONNECTION": "mongodb://username:password@host:port/database"
     }
   }
 }

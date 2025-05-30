@@ -32,9 +32,9 @@ class MongoConnector:
         """
 
         # Get connection string from environment variable
-        self.mongo_uri = os.getenv('MCP_NONGO_MEMORY_CONNECTION')
+        self.mongo_uri = os.getenv('MCP_MONGO_MEMORY_CONNECTION')
         if not self.mongo_uri:
-            msg = 'No MCP_NONGO_MEMORY_CONNECTION set for MongoDB'
+            msg = 'No MCP_MONGO_MEMORY_CONNECTION set for MongoDB'
             raise ValueError(msg)
 
     # Method removed as direct connection string is now used
