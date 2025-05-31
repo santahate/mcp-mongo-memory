@@ -223,17 +223,6 @@ def delete_relationship(from_entity: str, to_entity: str, relationship_type: str
     """
     return db.delete_relationship(from_entity, to_entity, relationship_type)
 
-def serve(db_connector):
-    """Create and configure the MCP server.
-    
-    Args:
-        db_connector: MongoDB connector instance
-        
-    Returns:
-        Configured MCP server instance
-    """
-    return mcp
-
 def main():
     """Run the MCP server."""
     mcp.run()
