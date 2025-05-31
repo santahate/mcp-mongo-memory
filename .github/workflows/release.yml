@@ -1,71 +1,63 @@
-name: Publish to TestPyPI
+name: Release to TestPyPI
 
 on:
-  push:
+  pull_request:
+    types: [closed]
     branches: [ master ]
 
 jobs:
-  build-and-publish:
-    runs-on: ubuntu-latest
-    if: "!startsWith(github.event.head_commit.message, 'Bump version:')"
+  publish:
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.ref == 'dev'
 
+    runs-on: ubuntu-latest
     permissions:
       contents: write
-      id-token: write
+      id-token:  write
 
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'pip'
 
-      - name: Install tooling
-        run: |
-          pip install --upgrade pip
-          pip install bump2version build twine uv
+    - name: Install tooling
+      run: |
+        pip install --upgrade pip
+        pip install bump2version build twine uv tomllib
 
-      - name: Calculate next version
-        id: nextver
-        run: |
-          python - <<'PY'
-          import tomllib, os
-          with open("pyproject.toml", "rb") as f:
-              ver = tomllib.load(f)["project"]["version"]
+    - name: Pick semver part from PR labels
+      id: pick
+      run: |
+        labels="${{ join(github.event.pull_request.labels.*.name, ' ') }}"
+        if   [[ "$labels" == *"semver:major"* ]]; then echo "part=major" >> $GITHUB_OUTPUT
+        elif [[ "$labels" == *"semver:minor"* ]]; then echo "part=minor" >> $GITHUB_OUTPUT
+        else echo "part=patch" >> $GITHUB_OUTPUT
+        fi
 
-          major, minor, patch = map(int, ver.split("."))
-          patch += 1
-          new = f"{major}.{minor}.{patch}"
+    - name: Bump version, commit & tag
+      run: |
+        git config user.name  "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
-              fh.write(f"next={new}\n")
-          PY
+        bump2version "${{ steps.pick.outputs.part }}"
+        git push --follow-tags
 
-      - name: Bump, commit & tag
-        env:
-          NEW_VER: ${{ steps.nextver.outputs.next }}
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          bump2version --new-version "$NEW_VER" patch
-          # пушим одновременно commit и тег
-          git push --follow-tags
+    - name: Build dist/
+      run: |
+        rm -rf dist/ build/ .venv
+        uv venv
+        uv pip install build
+        uv run python -m build
 
-      - name: Build dist/
-        run: |
-          rm -rf dist/ build/ .venv
-          uv venv
-          uv pip install build
-          uv run python -m build
-
-      - name: Upload to Test PyPI
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
-        run: |
-          uv run twine upload \
-            --repository-url https://test.pypi.org/legacy/ \
-            dist/*
+    - name: Upload to Test PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
+      run: |
+        uv run twine upload --repository-url https://test.pypi.org/legacy/ dist/*
