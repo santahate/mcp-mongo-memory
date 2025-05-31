@@ -29,7 +29,7 @@ jobs:
     - name: Install tooling
       run: |
         pip install --upgrade pip
-        pip install bump2version build twine uv tomllib
+        pip install bump2version build twine uv
 
     - name: Pick semver part from PR labels
       id: pick
