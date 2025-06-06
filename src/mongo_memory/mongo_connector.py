@@ -7,6 +7,7 @@ from types import TracebackType
 from typing import Any, Optional
 
 from pymongo import MongoClient
+from pymongo.collection import Collection
 from pymongo.errors import DuplicateKeyError, PyMongoError, ServerSelectionTimeoutError
 
 
@@ -22,6 +23,7 @@ class MongoConnector:
         AGENT_MEMORY_DESCRIPTION_FIELD (str): Name of the description field
         ENTITY_COLLECTION (str): Name of the entities collection
         SYSTEM_MEMORY_DB (str): Name of the system memory database
+        MAX_RELATIONSHIPS_LIMIT (int): Maximum number of relationships that can be retrieved at once
     """
 
     def _load_envs(self) -> None:
@@ -67,6 +69,7 @@ class MongoConnector:
         self.AGENT_MEMORY_DESCRIPTION_FIELD = 'description'
         self.ENTITY_COLLECTION = 'entities'
         self.SYSTEM_MEMORY_DB = 'memory'
+        self.MAX_RELATIONSHIPS_LIMIT = 100
 
         self._load_envs()
         self.client = self.get_connection()
@@ -384,7 +387,7 @@ class MongoConnector:
         ]
         return all(idx in existing_keys for idx in required_indexes)
 
-    def _create_relationship_indexes(self, collection) -> None:
+    def _create_relationship_indexes(self, collection: Collection) -> None:
         """Create required indexes for relationships collection.
 
         Args:
@@ -557,13 +560,21 @@ class MongoConnector:
             TypeError: If query is provided but not a dictionary
             OperationError: If database operation fails
         """
-        if not 1 <= limit <= 100:
-            msg = 'Limit must be between 1 and 100'
-            raise ValueError(msg)
+        if not 1 <= limit <= self.MAX_RELATIONSHIPS_LIMIT:
+            return {
+                'error': f'Limit must be between 1 and {self.MAX_RELATIONSHIPS_LIMIT}',
+                'relationships': [],
+                'total_count': 0,
+                'page_info': {'has_next': False, 'next_cursor': None},
+            }
 
         if query is not None and not isinstance(query, dict):
-            msg = 'Query must be a dictionary'
-            raise TypeError(msg)
+            return {
+                'error': 'Query must be a dictionary',
+                'relationships': [],
+                'total_count': 0,
+                'page_info': {'has_next': False, 'next_cursor': None},
+            }
 
         database = self.client[self.AGENT_MEMORY_DB]
         collection = database['relationships']
