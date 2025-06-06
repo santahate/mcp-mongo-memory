@@ -1,6 +1,6 @@
 [project]
 name = "mongo-memory"
-version = "0.1.11"
+version = "0.1.12"
 description = "MCP-server that implements memory stored in MongoDB"
 readme = "README.md"
 requires-python = ">=3.12"
