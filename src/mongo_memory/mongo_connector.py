@@ -327,8 +327,12 @@ class MongoConnector:
                     key, value = prop.split('=')
                     rel_properties[key.strip()] = value.strip()
             except ValueError:
-                msg = 'Invalid relationship_type format'
-                raise ValueError(msg)
+                return {
+                    'success': False,
+                    'error': 'Invalid relationship_type format',
+                    'details': f'Expected format: "type:key1=value1,key2=value2", got: "{relationship_type}"',
+                    'example': 'works_at:position=developer,department=RnD',
+                }
 
         database = self.client[self.AGENT_MEMORY_DB]
         collection = database['relationships']
@@ -624,11 +628,19 @@ class MongoConnector:
         """
         # Validate entities exist
         if not self.get_entity(from_entity):
-            msg = f"Source entity '{from_entity}' does not exist"
-            raise ValueError(msg)
+            return {
+                'acknowledged': False,
+                'deleted_count': 0,
+                'error': 'Source entity not found',
+                'details': f"Entity '{from_entity}' does not exist",
+            }
         if not self.get_entity(to_entity):
-            msg = f"Target entity '{to_entity}' does not exist"
-            raise ValueError(msg)
+            return {
+                'acknowledged': False,
+                'deleted_count': 0,
+                'error': 'Target entity not found',
+                'details': f"Entity '{to_entity}' does not exist",
+            }
 
         # Parse relationship type and properties
         type_parts = relationship_type.split(':', 1)
@@ -641,8 +653,13 @@ class MongoConnector:
                     key, value = prop.split('=')
                     properties[key.strip()] = value.strip()
             except ValueError:
-                msg = 'Invalid relationship_type format'
-                raise ValueError(msg)
+                return {
+                    'acknowledged': False,
+                    'deleted_count': 0,
+                    'error': 'Invalid relationship_type format',
+                    'details': f'Expected format: "type:key1=value1,key2=value2", got: "{relationship_type}"',
+                    'example': 'works_at:position=developer,department=RnD',
+                }
 
         # Prepare query
         query = {
