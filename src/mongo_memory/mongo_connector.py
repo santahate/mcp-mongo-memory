@@ -226,12 +226,12 @@ class MongoConnector:
             {'$unwind': '$fields'},
             # Add field type
             {'$addFields': {
-                'field_type': {'$type': '$fields.v'}
+                'field_type': {'$type': '$fields.v'},
             }},
             # Filter out excluded fields and exclude date and object types
             {'$match': {
                 'fields.k': {'$nin': excluded_fields},
-                'field_type': {'$nin': ['date', 'object']}
+                'field_type': {'$nin': ['date', 'object']},
             }},
             {'$group': {
                 '_id': '$fields.k',
