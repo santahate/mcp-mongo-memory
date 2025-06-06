@@ -24,7 +24,7 @@ class FindEntitiesParams(TypedDict):
 def create_entities(entities: list[dict]) -> Mapping:
     """Create entities in memory.
 
-    💡 HINT: If this is your first memory operation in this session, 
+    💡 HINT: If this is your first memory operation in this session,
     consider calling get_usage_guide() first for best practices.
 
     Args:
@@ -40,7 +40,7 @@ def create_entities(entities: list[dict]) -> Mapping:
 def get_entity(name: str) -> dict | None:
     """Get a single entity by its name.
 
-    💡 HINT: If this is your first memory operation in this session, 
+    💡 HINT: If this is your first memory operation in this session,
     consider calling get_usage_guide() first for best practices.
 
     Args:
@@ -55,7 +55,7 @@ def get_entity(name: str) -> dict | None:
 def get_memory_structure() -> dict[str, Any]:
     """Get the current memory structure.
 
-    💡 HINT: If this is your first memory operation in this session, 
+    💡 HINT: If this is your first memory operation in this session,
     consider calling get_usage_guide() first for best practices.
 
     Returns:
@@ -67,7 +67,7 @@ def get_memory_structure() -> dict[str, Any]:
 def update_entity(name: str, update: dict, upsert: bool = False) -> Mapping:
     """Update a single entity by its name.
 
-    💡 HINT: If this is your first memory operation in this session, 
+    💡 HINT: If this is your first memory operation in this session,
     consider calling get_usage_guide() first for best practices.
 
     Args:
@@ -84,7 +84,7 @@ def update_entity(name: str, update: dict, upsert: bool = False) -> Mapping:
 def delete_entity(name: str) -> Mapping:
     """Delete a single entity by its name.
 
-    💡 HINT: If this is your first memory operation in this session, 
+    💡 HINT: If this is your first memory operation in this session,
     consider calling get_usage_guide() first for best practices.
 
     Args:
@@ -99,7 +99,7 @@ def delete_entity(name: str) -> Mapping:
 def find_entities(query: dict, limit: int = 10) -> list[dict]:
     """Find entities matching the query criteria.
 
-    💡 HINT: If this is your first memory operation in this session, 
+    💡 HINT: If this is your first memory operation in this session,
     consider calling get_usage_guide() first for best practices.
 
     Args:
@@ -150,7 +150,7 @@ def create_relationship(
 ) -> Mapping:
     """Create a relationship between two entities.
 
-    💡 HINT: If this is your first memory operation in this session, 
+    💡 HINT: If this is your first memory operation in this session,
     consider calling get_usage_guide() first for best practices.
 
     Args:
@@ -189,30 +189,30 @@ def create_relationship(
 @mcp.tool()
 def get_relationships(limit: int = 10) -> Mapping[str, object]:
     """Get relationships from the database.
-    
-    💡 HINT: If this is your first memory operation in this session, 
+
+    💡 HINT: If this is your first memory operation in this session,
     consider calling get_usage_guide() first for best practices.
-    
+
     IMPORTANT: This tool is designed to return all relationships up to the specified limit.
     If you need to filter relationships, process the results in your code.
-    
+
     Example:
         # Get all relationships (up to limit)
         result = get_relationships(limit=5)
-        
+
         # Filter in your code if needed
         imports = [r for r in result["relationships"] if r["type"] == "imports"]
-    
+
     Args:
         limit (int): Maximum number of relationships to return. Must be between 1 and 100.
             Defaults to 10.
-    
+
     Returns:
         Mapping[str, object]: Dictionary containing:
             - relationships: List of relationship objects
             - total_count: Total number of relationships
             - page_info: Pagination information
-            
+
     Example:
             {
                 "relationships": [
@@ -238,7 +238,7 @@ def get_relationships(limit: int = 10) -> Mapping[str, object]:
 def delete_relationship(from_entity: str, to_entity: str, relationship_type: str) -> Mapping[str, object]:
     """Delete a relationship between two entities.
 
-    💡 HINT: If this is your first memory operation in this session, 
+    💡 HINT: If this is your first memory operation in this session,
     consider calling get_usage_guide() first for best practices.
 
     Args:

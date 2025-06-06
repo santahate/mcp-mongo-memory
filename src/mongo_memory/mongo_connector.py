@@ -4,7 +4,7 @@ from collections.abc import Iterator, Mapping
 from datetime import datetime
 import os
 from types import TracebackType
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from pymongo import MongoClient
 from pymongo.errors import DuplicateKeyError, PyMongoError, ServerSelectionTimeoutError
@@ -30,7 +30,6 @@ class MongoConnector:
         Raises:
             ValueError: If required environment variable is missing.
         """
-
         # Get connection string from environment variable
         self.mongo_uri = os.getenv('MCP_MONGO_MEMORY_CONNECTION')
         if not self.mongo_uri:
@@ -166,17 +165,19 @@ class MongoConnector:
 
         Returns:
             True if validation passes, False otherwise
-        
+
         Raises:
             ValueError: If required fields are missing or have invalid types
         """
         # Check required fields
         if self.AGENT_MEMORY_INDEX_FIELD not in entity:
-            raise ValueError(f'Missing required field: {self.AGENT_MEMORY_INDEX_FIELD}')
+            msg = f'Missing required field: {self.AGENT_MEMORY_INDEX_FIELD}'
+            raise ValueError(msg)
 
         # Validate field types
         if not isinstance(entity[self.AGENT_MEMORY_INDEX_FIELD], str):
-            raise ValueError(f'Field {self.AGENT_MEMORY_INDEX_FIELD} must be a string')
+            msg = f'Field {self.AGENT_MEMORY_INDEX_FIELD} must be a string'
+            raise ValueError(msg)
 
         return True
 
@@ -309,9 +310,11 @@ class MongoConnector:
         """
         # Validate entities exist
         if not self.get_entity(from_entity):
-            raise ValueError(f"Source entity '{from_entity}' does not exist")
+            msg = f"Source entity '{from_entity}' does not exist"
+            raise ValueError(msg)
         if not self.get_entity(to_entity):
-            raise ValueError(f"Target entity '{to_entity}' does not exist")
+            msg = f"Target entity '{to_entity}' does not exist"
+            raise ValueError(msg)
 
         # Parse relationship type and properties
         type_parts = relationship_type.split(':', 1)
@@ -324,7 +327,8 @@ class MongoConnector:
                     key, value = prop.split('=')
                     rel_properties[key.strip()] = value.strip()
             except ValueError:
-                raise ValueError('Invalid relationship_type format')
+                msg = 'Invalid relationship_type format'
+                raise ValueError(msg)
 
         database = self.client[self.AGENT_MEMORY_DB]
         collection = database['relationships']
@@ -370,7 +374,7 @@ class MongoConnector:
             ('to_name', 1),
         ]
         existing_keys = [
-            tuple(index['key'].items())[0]
+            next(iter(index['key'].items()))
             for index in indexes
             if index['key'] != {'_id': 1}
         ]
@@ -523,7 +527,7 @@ class MongoConnector:
 
     def get_relationships(
         self,
-        query: Optional[Dict[str, Any]] = None,
+        query: Optional[dict[str, Any]] = None,
         limit: int = 10,
     ) -> Mapping[str, object]:
         """Get relationships matching the query criteria.
@@ -533,7 +537,7 @@ class MongoConnector:
                 Example: {"type": "imports"} - finds all import relationships
                 Example: {"from_entity": "main_module"} - finds all relationships from main_module
                 Default: None (returns all relationships)
-            
+
             limit (int): Maximum number of relationships to return.
                 Must be between 1 and 100.
                 Default: 10
@@ -550,10 +554,12 @@ class MongoConnector:
             OperationError: If database operation fails
         """
         if not 1 <= limit <= 100:
-            raise ValueError('Limit must be between 1 and 100')
+            msg = 'Limit must be between 1 and 100'
+            raise ValueError(msg)
 
         if query is not None and not isinstance(query, dict):
-            raise TypeError('Query must be a dictionary')
+            msg = 'Query must be a dictionary'
+            raise TypeError(msg)
 
         database = self.client[self.AGENT_MEMORY_DB]
         collection = database['relationships']
@@ -618,9 +624,11 @@ class MongoConnector:
         """
         # Validate entities exist
         if not self.get_entity(from_entity):
-            raise ValueError(f"Source entity '{from_entity}' does not exist")
+            msg = f"Source entity '{from_entity}' does not exist"
+            raise ValueError(msg)
         if not self.get_entity(to_entity):
-            raise ValueError(f"Target entity '{to_entity}' does not exist")
+            msg = f"Target entity '{to_entity}' does not exist"
+            raise ValueError(msg)
 
         # Parse relationship type and properties
         type_parts = relationship_type.split(':', 1)
@@ -633,7 +641,8 @@ class MongoConnector:
                     key, value = prop.split('=')
                     properties[key.strip()] = value.strip()
             except ValueError:
-                raise ValueError('Invalid relationship_type format')
+                msg = 'Invalid relationship_type format'
+                raise ValueError(msg)
 
         # Prepare query
         query = {
