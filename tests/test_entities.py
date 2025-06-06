@@ -1,6 +1,6 @@
 """Tests for basic entity operations."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 
@@ -81,7 +81,7 @@ def test_update_entity(mongo_connector):
     update = {
         '$set': {
             'data.value': 2,
-            'updated_at': datetime.now(),
+            'updated_at': datetime.now(timezone.utc),
         },
     }
     result = mongo_connector.update_entity('test_entity', update)

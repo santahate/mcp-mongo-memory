@@ -1,11 +1,21 @@
 instructions = """
-This is a MongoDB-based memory database for persistent storage of information.
+🧠 MongoDB Memory Database - Persistent Information Storage
 
-IMPORTANT: Before using any memory operations, you MUST:
-1. Call get_usage_guide() to understand proper usage patterns and examples
-2. Call get_memory_structure() to understand the current memory organization
+🚨 MANDATORY FIRST STEPS (for new sessions):
+1. ✅ Call get_usage_guide() - REQUIRED for understanding best practices
+2. ✅ Call get_memory_structure() - REQUIRED for understanding current organization
 
-This will help you use the memory system effectively and avoid common mistakes.
+⚠️  IMPORTANT: These steps help you avoid common mistakes and use memory effectively!
 
-Available operations: create_entities, get_entity, update_entity, delete_entity, find_entities, create_relationship, get_relationships, delete_relationship, get_memory_structure, get_usage_guide.
+📋 QUICK CHECKLIST before memory operations:
+☐ Have you called get_usage_guide() if this is a new session?
+☐ Do you understand the memory organization principles?
+☐ Are you following proper categorization patterns?
+
+🛠️ Available operations:
+- create_entities, get_entity, update_entity, delete_entity, find_entities
+- create_relationship, get_relationships, delete_relationship
+- get_memory_structure, get_usage_guide
+
+💡 Each operation includes hints to remind you about best practices.
 """

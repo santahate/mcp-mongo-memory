@@ -81,13 +81,13 @@ entity_types = memory_structure.get("entity_types", [])
 def remember_interaction(user_id: str, interaction_data: dict, context: dict = None):
     # If no context provided, agent should ask user:
     # "How would you like me to categorize this interaction?"
-    
+
     category_marker = (
         context.get("category_marker")  # Use existing context if available
         or "task_123"                   # Or use what user specified
         or "time_" + current_time       # Or default to timestamp
     )
-    
+
     memory.update_entity(
         f"interaction_{user_id}_{category_marker}",
         {"$set": {
@@ -127,7 +127,7 @@ def remember_fact(topic: str, fact: str, source: str, context: dict = None):
         context.get("categorization")
         or ask_user_for_categorization()  # Agent should implement this
     )
-    
+
     memory.create_entities([{
         "name": f"fact_{category}_{hash(fact)}",
         "type": "fact",
@@ -291,7 +291,7 @@ def process_entities(entity_type: str):
 def get_full_context(entity_name: str) -> dict:
     # Get entity
     entity = memory.get_entity(entity_name)
-    
+
     # Get relationships
     relations = memory.find_entities({
         "type": "relationship",
@@ -300,7 +300,7 @@ def get_full_context(entity_name: str) -> dict:
             {"data.to": entity_name}
         ]
     })
-    
+
     # Get related entities
     related = []
     for rel in relations:
@@ -308,7 +308,7 @@ def get_full_context(entity_name: str) -> dict:
             related.append(memory.get_entity(rel["data"]["to"]))
         else:
             related.append(memory.get_entity(rel["data"]["from"]))
-    
+
     return {
         "entity": entity,
         "relationships": relations,

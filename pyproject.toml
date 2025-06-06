@@ -21,7 +21,6 @@ classifiers = [
 dependencies = [
     "mcp[cli]>=1.3.0",
     "pymongo>=4.11.1",
-    "python-dotenv>=1.0.0",
 ]
 
 [tool.hatch.build]
@@ -66,7 +65,7 @@ build-backend = "hatchling.build"
 
 [tool.ruff]
 target-version = "py39"
-line-length = 100
+line-length = 140
 
 [tool.ruff.lint]
 select = [
@@ -121,6 +120,7 @@ ignore = [
     "D100",  # Missing docstring in public module
     "FBT001", # Boolean-typed positional argument in function definition
     "FBT002", # Boolean default positional argument in function definition
+    "TRY300", # Consider moving to else block - stylistic preference
 ]
 
 exclude = [
@@ -157,6 +157,7 @@ convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
+"tests/**" = ["S101", "ANN", "D", "PLR2004", "INP001", "ARG001", "PT011"]  # Allow assert, no type annotations/docstrings, magic values, missing __init__.py, unused args, broad pytest.raises
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10
@@ -174,7 +175,7 @@ matplotlib = "plt"
 seaborn = "sns"
 
 [tool.ruff.lint.flake8-tidy-imports]
-ban-relative-imports = "all"
+ban-relative-imports = "parents"
 
 [tool.ruff.lint.pyupgrade]
 keep-runtime-typing = true
