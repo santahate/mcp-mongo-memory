@@ -177,7 +177,7 @@ class MongoConnector:
         # Validate field types
         if not isinstance(entity[self.AGENT_MEMORY_INDEX_FIELD], str):
             msg = f'Field {self.AGENT_MEMORY_INDEX_FIELD} must be a string'
-            raise ValueError(msg)
+            raise TypeError(msg)
 
         return True
 

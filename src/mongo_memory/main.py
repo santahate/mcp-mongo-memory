@@ -180,9 +180,9 @@ def create_relationship(
                     if '=' in prop:
                         key, value = prop.split('=', 1)
                         properties[key.strip()] = value.strip()
-        except Exception:
+        except ValueError:
             msg = f'Invalid relationship_type format. Expected "type:key1=value1,key2=value2", got {relationship_type}'
-            raise ValueError(msg)
+            raise ValueError(msg) from None
 
     return db.create_relationship(from_entity, to_entity, rel_type, properties)
 
