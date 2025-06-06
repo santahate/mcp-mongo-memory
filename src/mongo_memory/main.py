@@ -5,12 +5,13 @@ from typing import Any, Required, TypedDict
 
 from mcp.server import FastMCP
 
-from mongo_memory.constants import user_guide, instructions
+from mongo_memory.constants import instructions, user_guide
+
 from .mongo_connector import MongoConnector
 
 mcp = FastMCP(
     name='mongo-memory',
-    instructions=instructions
+    instructions=instructions,
 )
 db = MongoConnector()
 
@@ -22,6 +23,9 @@ class FindEntitiesParams(TypedDict):
 @mcp.tool()
 def create_entities(entities: list[dict]) -> Mapping:
     """Create entities in memory.
+
+    💡 HINT: If this is your first memory operation in this session, 
+    consider calling get_usage_guide() first for best practices.
 
     Args:
         entities (list[dict]): List of entities to create. Each entity must have
@@ -36,6 +40,9 @@ def create_entities(entities: list[dict]) -> Mapping:
 def get_entity(name: str) -> dict | None:
     """Get a single entity by its name.
 
+    💡 HINT: If this is your first memory operation in this session, 
+    consider calling get_usage_guide() first for best practices.
+
     Args:
         name (str): Unique name of the entity to retrieve.
 
@@ -48,6 +55,9 @@ def get_entity(name: str) -> dict | None:
 def get_memory_structure() -> dict[str, Any]:
     """Get the current memory structure.
 
+    💡 HINT: If this is your first memory operation in this session, 
+    consider calling get_usage_guide() first for best practices.
+
     Returns:
         dict: Dictionary containing the current memory structure.
     """
@@ -56,6 +66,9 @@ def get_memory_structure() -> dict[str, Any]:
 @mcp.tool()
 def update_entity(name: str, update: dict, upsert: bool = False) -> Mapping:
     """Update a single entity by its name.
+
+    💡 HINT: If this is your first memory operation in this session, 
+    consider calling get_usage_guide() first for best practices.
 
     Args:
         name (str): Unique name of the entity to update.
@@ -71,6 +84,9 @@ def update_entity(name: str, update: dict, upsert: bool = False) -> Mapping:
 def delete_entity(name: str) -> Mapping:
     """Delete a single entity by its name.
 
+    💡 HINT: If this is your first memory operation in this session, 
+    consider calling get_usage_guide() first for best practices.
+
     Args:
         name (str): Unique name of the entity to delete.
 
@@ -82,6 +98,9 @@ def delete_entity(name: str) -> Mapping:
 @mcp.tool()
 def find_entities(query: dict, limit: int = 10) -> list[dict]:
     """Find entities matching the query criteria.
+
+    💡 HINT: If this is your first memory operation in this session, 
+    consider calling get_usage_guide() first for best practices.
 
     Args:
         query (dict): MongoDB query dictionary. Must be a non-empty dictionary.
@@ -104,7 +123,7 @@ def find_entities(query: dict, limit: int = 10) -> list[dict]:
 
 @mcp.tool()
 def get_usage_guide() -> str:
-    """Get a quick start guide with examples for using this MCP service.
+    """🚨 RECOMMENDED FIRST STEP: Get a quick start guide with examples for using this MCP service.
 
     This guide MUST be retrieved by the agent in the following cases:
     1. When memory-related operations are requested but no memory context exists
@@ -130,6 +149,9 @@ def create_relationship(
     relationship_type: str,  # Format: "type:key1=value1,key2=value2" e.g. "works_at:position=developer,department=RnD"
 ) -> Mapping:
     """Create a relationship between two entities.
+
+    💡 HINT: If this is your first memory operation in this session, 
+    consider calling get_usage_guide() first for best practices.
 
     Args:
         from_entity (str): Name of the source entity
@@ -167,6 +189,9 @@ def create_relationship(
 @mcp.tool()
 def get_relationships(limit: int = 10) -> Mapping[str, object]:
     """Get relationships from the database.
+    
+    💡 HINT: If this is your first memory operation in this session, 
+    consider calling get_usage_guide() first for best practices.
     
     IMPORTANT: This tool is designed to return all relationships up to the specified limit.
     If you need to filter relationships, process the results in your code.
@@ -212,6 +237,9 @@ def get_relationships(limit: int = 10) -> Mapping[str, object]:
 @mcp.tool()
 def delete_relationship(from_entity: str, to_entity: str, relationship_type: str) -> Mapping[str, object]:
     """Delete a relationship between two entities.
+
+    💡 HINT: If this is your first memory operation in this session, 
+    consider calling get_usage_guide() first for best practices.
 
     Args:
         from_entity (str): Name of the source entity
