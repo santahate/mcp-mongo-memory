@@ -28,23 +28,26 @@ The Memory Graph Server provides a persistent storage layer for knowledge graphs
 
 If you do not already have a MongoDB instance running, you can spin up a **free** cloud cluster on MongoDB Atlas ([https://cloud.mongodb.com](https://cloud.mongodb.com)) in just a few minutes:
 
-1. **Register / Sign in**
+1. **Register / Sign in**  
    Open [https://cloud.mongodb.com](https://cloud.mongodb.com) and create an account. You can register with e‑mail or sign in via **Google** or **GitHub**.
-2. **Create a Project & Cluster**
+
+2. **Create a Project & Cluster**  
    Create a new *Project* (e.g. `mcp-memory`) and choose **Create → Deployment → Create a cluster**.
    Select the **Free Shared (M0)** tier, pick the provider/region closest to you, give the cluster a name and click **Create**.
    Provisioning takes \~2‑3 minutes.
-3. **Create a Database User**
+
+3. **Create a Database User**  
    Navigate to **Database Access → Add New Database User**.
    – Choose *Password* authentication.
    – Enter a **Username** (e.g. `mcp_user`) and a strong **Password** (or autogenerate one).
    – For quick tests, give the user **Read and write to any database** privileges (you can tighten this later).
    – Click **Add User** and store the credentials somewhere safe.
-4. **Allow Your IP Address**
+
+4. **Allow Your IP Address**  
    Go to **Network Access → Add IP Address** and whitelist the public IP address from which the server will connect.
    You can click **Add Current IP Address** or specify it manually.
 
-5. **Get the Connection String (URI)**
+5. **Get the Connection String (URI)**  
    On the **Database Deployments** screen click **Connect → Drivers**, choose *Python* and copy the URI, which looks like:
 
    ```
@@ -52,7 +55,8 @@ If you do not already have a MongoDB instance running, you can spin up a **free*
    ```
 
    Replace `<username>`/`<password>` with the credentials from step 3 and optionally append `/<database>` to select the default database, e.g. `/mcp_memory`.
-6. **Configure the Memory Graph Server**
+
+6. **Configure the Memory Graph Server**  
    Export the connection string via the environment variable expected by the server:
 
    ```bash
@@ -61,7 +65,7 @@ If you do not already have a MongoDB instance running, you can spin up a **free*
 
    Keep the quotes around the URI so that special characters are preserved, and **never commit this string to version control**.
 
-Now you can launch the server as shown in the [Usage](##Using MCP Server) section.
+Now you can launch the server as shown in the [MCP Server Configuration](#mcp-server-configuration) section.
 
 ### Using Environment Variables Directly
 
