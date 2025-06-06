@@ -1,7 +1,7 @@
 # MCP Memory Graph Server
 
-[//]: # ([![PyPI version]&#40;https://badge.fury.io/py/mongo-memory.svg&#41;]&#40;https://badge.fury.io/py/mongo-memory&#41;)
-[//]: # ([![Python Version]&#40;https://img.shields.io/pypi/pyversions/mongo-memory.svg&#41;]&#40;https://pypi.org/project/mongo-memory/&#41;)
+[![PyPI version](https://badge.fury.io/py/mongo-memory.svg)](https://badge.fury.io/py/mongo-memory)
+[![Python Version](https://img.shields.io/pypi/pyversions/mongo-memory.svg)](https://pypi.org/project/mongo-memory/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Overview
