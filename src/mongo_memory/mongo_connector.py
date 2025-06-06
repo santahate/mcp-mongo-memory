@@ -26,17 +26,59 @@ class MongoConnector:
         MAX_RELATIONSHIPS_LIMIT (int): Maximum number of relationships that can be retrieved at once
     """
 
-    def _load_envs(self) -> None:
+    def _load_envs(self) -> dict[str, Any]:
         """Load MongoDB connection string from environment variables.
 
-        Raises:
-            ValueError: If required environment variable is missing.
+        Returns:
+            Dictionary with success status and connection details or error information
         """
         # Get connection string from environment variable
         self.mongo_uri = os.getenv('MCP_MONGO_MEMORY_CONNECTION')
         if not self.mongo_uri:
-            msg = 'No MCP_MONGO_MEMORY_CONNECTION set for MongoDB'
-            raise ValueError(msg)
+            return {
+                'success': False,
+                'error': 'MCP_MONGO_MEMORY_CONNECTION environment variable not set',
+                'details': 'The mongo-memory MCP server requires a MongoDB connection string',
+                'setup_instructions': {
+                    'step_1': 'Set the environment variable in your MCP configuration',
+                    'step_2': 'Add this to your MCP server config:',
+                    'example': {
+                        'env': {
+                            'MCP_MONGO_MEMORY_CONNECTION': 'mongodb://username:password@host:port/database',
+                        },
+                    },
+                    'mongodb_atlas': 'For free MongoDB Atlas setup, see: https://github.com/santahate/mcp-mongo-memory#configuration',
+                },
+            }
+        return {'success': True, 'connection_string': self.mongo_uri}
+
+    def is_configured(self) -> bool:
+        """Check if MongoDB connector is properly configured.
+
+        Returns:
+            True if configured and connected, False otherwise
+        """
+        return self.config_error is None and self.client is not None
+
+    def get_configuration_status(self) -> dict[str, Any]:
+        """Get current configuration status and any error details.
+
+        Returns:
+            Dictionary with configuration status and error details if any
+        """
+        if self.config_error:
+            return self.config_error
+        return {'success': True, 'status': 'MongoDB connection configured and working'}
+
+    def _check_configuration(self) -> dict[str, Any] | None:
+        """Check if MongoDB is properly configured.
+
+        Returns:
+            Error dictionary if not configured, None if configured properly
+        """
+        if not self.is_configured():
+            return self.get_configuration_status()
+        return None
 
     # Method removed as direct connection string is now used
 
@@ -70,12 +112,29 @@ class MongoConnector:
         self.ENTITY_COLLECTION = 'entities'
         self.SYSTEM_MEMORY_DB = 'memory'
         self.MAX_RELATIONSHIPS_LIMIT = 100
+        self.config_error = None
 
-        self._load_envs()
+        env_result = self._load_envs()
+        if not env_result['success']:
+            # Store configuration error for later retrieval
+            self.config_error = env_result
+            self.client = None
+            return
+
         self.client = self.get_connection()
         if not self.test_connection():
-            msg = "Can't connect to MongoDB"
-            raise ValueError(msg)
+            self.config_error = {
+                'success': False,
+                'error': "Can't connect to MongoDB",
+                'details': 'Connection string is set but MongoDB server is not reachable',
+                'troubleshooting': {
+                    'check_1': 'Verify MongoDB server is running',
+                    'check_2': 'Check connection string format',
+                    'check_3': 'Verify network connectivity',
+                    'check_4': 'Check MongoDB Atlas IP whitelist if using Atlas',
+                },
+            }
+            return
 
         # Initialize rules and indexes
         self.init_entity_rules()
@@ -90,7 +149,8 @@ class MongoConnector:
 
     def __del__(self) -> None:
         """Destructor that ensures connection cleanup."""
-        self.client.close()
+        if hasattr(self, 'client') and self.client is not None:
+            self.client.close()
 
     def __exit__(
         self,
@@ -105,7 +165,8 @@ class MongoConnector:
             exc_val: Exception value if error occurred
             exc_tb: Exception traceback if error occurred
         """
-        self.client.close()
+        if hasattr(self, 'client') and self.client is not None:
+            self.client.close()
 
     # Validation and unique rules
 
@@ -255,6 +316,11 @@ class MongoConnector:
         Returns:
             Operation result with success status and count or error
         """
+        # Check configuration first
+        config_error = self._check_configuration()
+        if config_error:
+            return config_error
+
         try:
             # Validate all entities first
             for entity in entities:
@@ -311,11 +377,16 @@ class MongoConnector:
             ValueError: If relationship_type format is invalid
             PyMongoError: If any MongoDB-related error occurs
         """
+        # Check configuration first
+        config_error = self._check_configuration()
+        if config_error:
+            return config_error
+
         # Validate entities exist
-        if not self.get_entity(from_entity):
+        if not self._get_entity_internal(from_entity):
             msg = f"Source entity '{from_entity}' does not exist"
             raise ValueError(msg)
-        if not self.get_entity(to_entity):
+        if not self._get_entity_internal(to_entity):
             msg = f"Target entity '{to_entity}' does not exist"
             raise ValueError(msg)
 
@@ -405,26 +476,63 @@ class MongoConnector:
             unique=True,
         )
 
-    def get_entity(self, name: str) -> dict[str, Any] | None:
-        """Get a single entity by its name.
+    def _get_entity_internal(self, name: str) -> dict[str, Any] | None:
+        """Internal method to get entity without configuration error handling.
+
+        Used by other methods that need to check entity existence.
 
         Args:
             name: Unique name of the entity to retrieve
 
         Returns:
             Entity dictionary if found, None otherwise
-
-        Raises:
-            PyMongoError: If any MongoDB-related error occurs
         """
+        if not self.is_configured():
+            return None
+
         database = self.client[self.AGENT_MEMORY_DB]
         collection = database[self.ENTITY_COLLECTION]
 
         try:
             return collection.find_one({self.AGENT_MEMORY_INDEX_FIELD: name})
+        except PyMongoError:
+            return None
+
+    def get_entity(self, name: str) -> dict[str, Any]:
+        """Get a single entity by its name.
+
+        Args:
+            name: Unique name of the entity to retrieve
+
+        Returns:
+            Dictionary with entity data or error information
+
+        Raises:
+            PyMongoError: If any MongoDB-related error occurs
+        """
+        # Check configuration first
+        config_error = self._check_configuration()
+        if config_error:
+            return config_error
+
+        database = self.client[self.AGENT_MEMORY_DB]
+        collection = database[self.ENTITY_COLLECTION]
+
+        try:
+            entity = collection.find_one({self.AGENT_MEMORY_INDEX_FIELD: name})
+            if entity:
+                return entity
+            return {
+                'success': False,
+                'error': 'Entity not found',
+                'details': f"No entity with name '{name}' exists",
+            }
         except PyMongoError as e:
-            error_message = f'Error retrieving entity: {e}'
-            raise PyMongoError(error_message) from e
+            return {
+                'success': False,
+                'error': f'Database error: {e}',
+                'details': 'Failed to retrieve entity from database',
+            }
 
     def update_entity(
         self,
@@ -442,6 +550,11 @@ class MongoConnector:
         Returns:
             Operation result with success status or error
         """
+        # Check configuration first
+        config_error = self._check_configuration()
+        if config_error:
+            return config_error
+
         try:
             database = self.client[self.AGENT_MEMORY_DB]
             collection = database[self.ENTITY_COLLECTION]
@@ -479,6 +592,11 @@ class MongoConnector:
         Returns:
             Operation result with success status or error
         """
+        # Check configuration first
+        config_error = self._check_configuration()
+        if config_error:
+            return config_error
+
         try:
             database = self.client[self.AGENT_MEMORY_DB]
             collection = database[self.ENTITY_COLLECTION]
@@ -497,7 +615,7 @@ class MongoConnector:
                 'error': str(e),
             }
 
-    def find_entities(self, query: dict[str, Any], limit: int = 10) -> list[dict[str, Any]]:
+    def find_entities(self, query: dict[str, Any], limit: int = 10) -> dict[str, Any]:
         """Find entities matching the query criteria.
 
         Args:
@@ -505,32 +623,48 @@ class MongoConnector:
             limit: Maximum number of entities to return. Defaults to 10.
 
         Returns:
-            List of matching entity dictionaries.
+            Dictionary with entities list or error information
 
         Raises:
             ValueError: If query is empty or None
             TypeError: If query is not a dictionary
-            PyMongoError: If any MongoDB-related error occurs
         """
-        if query is None:
-            msg = 'Query parameter cannot be None'
-            raise ValueError(msg)
-        if not isinstance(query, dict):
-            msg = f'Query must be a dictionary, got {type(query)}'
-            raise TypeError(msg)
         if not query:
-            msg = 'Query dictionary cannot be empty'
-            raise ValueError(msg)
+            return {
+                'success': False,
+                'error': 'Query dictionary cannot be empty',
+                'entities': [],
+            }
+        if not isinstance(query, dict):
+            return {
+                'success': False,
+                'error': f'Query must be a dictionary, got {type(query)}',
+                'entities': [],
+            }
+
+        # Check configuration first
+        config_error = self._check_configuration()
+        if config_error:
+            return config_error
 
         database = self.client[self.AGENT_MEMORY_DB]
         collection = database[self.ENTITY_COLLECTION]
 
         try:
             cursor = collection.find(query)
-            return list(cursor.limit(limit))
+            entities = list(cursor.limit(limit))
         except PyMongoError as e:
-            error_message = f'Error finding entities: {e}'
-            raise PyMongoError(error_message) from e
+            return {
+                'success': False,
+                'error': f'Database error: {e}',
+                'entities': [],
+                'details': 'Failed to find entities in database',
+            }
+        return {
+            'success': True,
+            'entities': entities,
+            'count': len(entities),
+        }
 
     def get_relationships(
         self,
@@ -575,6 +709,11 @@ class MongoConnector:
                 'total_count': 0,
                 'page_info': {'has_next': False, 'next_cursor': None},
             }
+
+        # Check configuration first
+        config_error = self._check_configuration()
+        if config_error:
+            return config_error
 
         database = self.client[self.AGENT_MEMORY_DB]
         collection = database['relationships']
@@ -637,15 +776,20 @@ class MongoConnector:
             ValueError: If relationship_type format is invalid
             OperationError: If database operation fails
         """
+        # Check configuration first
+        config_error = self._check_configuration()
+        if config_error:
+            return config_error
+
         # Validate entities exist
-        if not self.get_entity(from_entity):
+        if not self._get_entity_internal(from_entity):
             return {
                 'acknowledged': False,
                 'deleted_count': 0,
                 'error': 'Source entity not found',
                 'details': f"Entity '{from_entity}' does not exist",
             }
-        if not self.get_entity(to_entity):
+        if not self._get_entity_internal(to_entity):
             return {
                 'acknowledged': False,
                 'deleted_count': 0,
