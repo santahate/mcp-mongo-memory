@@ -92,10 +92,6 @@ Add the snippet below to your mcp configuration:
     "Memory": {
       "command": "/path/to/local/bin/uvx",
       "args": [
-        "--index-url",
-        "https://test.pypi.org/simple",
-        "--extra-index-url",
-        "https://pypi.org/simple",
         "mongo-memory"
       ],
       "env": {
