@@ -1,7 +1,7 @@
 """MongoDB connector for agent memory operations."""
 
 from collections.abc import Iterator, Mapping
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 from types import TracebackType
 from typing import Any, Optional
@@ -266,8 +266,8 @@ class MongoConnector:
 
             # Add timestamps
             for entity in entities:
-                entity['created_at'] = datetime.now()
-                entity['updated_at'] = datetime.now()
+                entity['created_at'] = datetime.now(timezone.utc)
+                entity['updated_at'] = datetime.now(timezone.utc)
 
             result = collection.insert_many(entities)
             return {
@@ -342,7 +342,7 @@ class MongoConnector:
             'to_entity': to_entity,      # Store as string
             'type': rel_type,
             'properties': rel_properties,
-            'created_at': datetime.now(),
+            'created_at': datetime.now(timezone.utc),
         }
 
         try:
@@ -443,7 +443,7 @@ class MongoConnector:
             if '$set' not in update:
                 update['$set'] = {}
             if 'updated_at' not in update['$set']:
-                update['$set']['updated_at'] = datetime.now()
+                update['$set']['updated_at'] = datetime.now(timezone.utc)
 
             result = collection.update_one(
                 {self.AGENT_MEMORY_INDEX_FIELD: name},
