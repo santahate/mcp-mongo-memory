@@ -54,7 +54,7 @@ class MongoConnector:
             )
         return {'success': True, 'connection_string': self.mongo_uri}
 
-    def is_configured(self) -> bool:
+    def _is_configured(self) -> bool:
         """Check if MongoDB connector is properly configured.
 
         Returns:
@@ -62,7 +62,7 @@ class MongoConnector:
         """
         return self.config_error is None and self.client is not None
 
-    def get_configuration_status(self) -> dict[str, Any]:
+    def _get_configuration_status(self) -> dict[str, Any]:
         """Get current configuration status and any error details.
 
         Returns:
@@ -78,8 +78,8 @@ class MongoConnector:
         Returns:
             Error dictionary if not configured, None if configured properly
         """
-        if not self.is_configured():
-            return self.get_configuration_status()
+        if not self._is_configured():
+            return self._get_configuration_status()
         return None
 
     # Method removed as direct connection string is now used
@@ -427,10 +427,10 @@ class MongoConnector:
 
         try:
             result = collection.insert_one(relationship)
-            return {
-                'acknowledged': result.acknowledged,
-                'inserted_id': str(result.inserted_id),
-            }
+            return create_success_response(
+                acknowledged=result.acknowledged,
+                inserted_id=str(result.inserted_id),
+            )
         except PyMongoError as e:
             return create_error_response(
                 'Database error',
@@ -490,7 +490,7 @@ class MongoConnector:
         Returns:
             Entity dictionary if found, None otherwise
         """
-        if not self.is_configured():
+        if not self._is_configured():
             return None
 
         database = self.client[self.AGENT_MEMORY_DB]
@@ -748,14 +748,14 @@ class MongoConnector:
                 if '_id' in rel:
                     rel['_id'] = str(rel['_id'])
 
-            return {
-                'relationships': relationships,
-                'total_count': total_count,
-                'page_info': {
+            return create_success_response(
+                relationships=relationships,
+                total_count=total_count,
+                page_info={
                     'has_next': has_next,
                     'next_cursor': str(relationships[-1]['_id']) if has_next and relationships else None,
                 },
-            }
+            )
         except PyMongoError as e:
             return create_error_response(
                 'Database error',
@@ -847,11 +847,10 @@ class MongoConnector:
             collection = database['relationships']
             result = collection.delete_one(query)
 
-            return {
-                'acknowledged': result.acknowledged,
-                'deleted_count': result.deleted_count,
-                'error': None,
-            }
+            return create_success_response(
+                acknowledged=result.acknowledged,
+                deleted_count=result.deleted_count,
+            )
         except PyMongoError as e:
             return create_error_response(
                 'Database error',
