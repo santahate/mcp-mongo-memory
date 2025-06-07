@@ -152,9 +152,7 @@ def create_relationship(
 
     Returns:
         Mapping: Operation result containing either success details or error information.
-
-    Raises:
-        ValueError: If either entity does not exist or relationship_type format is invalid
+            If relationship_type format is invalid, returns error dictionary with details.
     """
     # Parse relationship type and properties
     parts = relationship_type.split(':', 1)
@@ -171,8 +169,12 @@ def create_relationship(
                         key, value = prop.split('=', 1)
                         properties[key.strip()] = value.strip()
         except ValueError:
-            msg = f'Invalid relationship_type format. Expected "type:key1=value1,key2=value2", got {relationship_type}'
-            raise ValueError(msg) from None
+            return {
+                'success': False,
+                'error': 'Invalid relationship_type format',
+                'message': f'Expected format: "type:key1=value1,key2=value2", but got: "{relationship_type}"',
+                'details': "Use format like 'works_at:position=developer,department=RnD' or simple 'knows'",
+            }
 
     return db.create_relationship(from_entity, to_entity, rel_type, properties)
 
