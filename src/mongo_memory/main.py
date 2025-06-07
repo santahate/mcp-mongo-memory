@@ -8,6 +8,7 @@ from mcp.server import FastMCP
 from mongo_memory.constants import instructions, user_guide
 
 from .mongo_connector import MongoConnector
+from .response_utils import create_error_response
 
 mcp = FastMCP(
     name='mongo-memory',
@@ -37,7 +38,7 @@ def create_entities(entities: list[dict]) -> Mapping:
     return db.create_entities(entities)
 
 @mcp.tool()
-def get_entity(name: str) -> dict | None:
+def get_entity(name: str) -> dict:
     """Get a single entity by its name.
 
     💡 HINT: If this is your first memory operation in this session,
@@ -47,7 +48,7 @@ def get_entity(name: str) -> dict | None:
         name (str): Unique name of the entity to retrieve.
 
     Returns:
-        dict | None: Entity dictionary if found, None otherwise.
+        dict: Entity dictionary if found, or error information if not found or configuration issue.
     """
     return db.get_entity(name)
 
@@ -96,7 +97,7 @@ def delete_entity(name: str) -> Mapping:
     return db.delete_entity(name)
 
 @mcp.tool()
-def find_entities(query: dict, limit: int = 10) -> list[dict]:
+def find_entities(query: dict, limit: int = 10) -> dict:
     """Find entities matching the query criteria.
 
     💡 HINT: If this is your first memory operation in this session,
@@ -107,18 +108,8 @@ def find_entities(query: dict, limit: int = 10) -> list[dict]:
         limit (int, optional): Maximum number of entities to return. Defaults to 10.
 
     Returns:
-        list[dict]: List of matching entity dictionaries.
-
-    Raises:
-        ValueError: If query is empty or None
-        TypeError: If query is not a dictionary
+        dict: Dictionary with entities list or error information.
     """
-    if query is None:
-        msg = 'Query parameter cannot be None'
-        raise ValueError(msg)
-    if not isinstance(query, dict):
-        msg = f'Query must be a dictionary, got {type(query)}'
-        raise TypeError(msg)
     return db.find_entities(query, limit)
 
 @mcp.tool()
@@ -162,9 +153,7 @@ def create_relationship(
 
     Returns:
         Mapping: Operation result containing either success details or error information.
-
-    Raises:
-        ValueError: If either entity does not exist or relationship_type format is invalid
+            If relationship_type format is invalid, returns error dictionary with details.
     """
     # Parse relationship type and properties
     parts = relationship_type.split(':', 1)
@@ -181,8 +170,11 @@ def create_relationship(
                         key, value = prop.split('=', 1)
                         properties[key.strip()] = value.strip()
         except ValueError:
-            msg = f'Invalid relationship_type format. Expected "type:key1=value1,key2=value2", got {relationship_type}'
-            raise ValueError(msg) from None
+            return create_error_response(
+                'Invalid relationship_type format',
+                f'Expected format: "type:key1=value1,key2=value2", but got: "{relationship_type}"',
+                "Use format like 'works_at:position=developer,department=RnD' or simple 'knows'",
+            )
 
     return db.create_relationship(from_entity, to_entity, rel_type, properties)
 
