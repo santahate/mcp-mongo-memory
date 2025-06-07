@@ -10,6 +10,8 @@ from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.errors import DuplicateKeyError, PyMongoError, ServerSelectionTimeoutError
 
+from .response_utils import create_error_response, create_success_response
+
 
 class MongoConnector:
     """Handles MongoDB connections and operations for agent memory.
@@ -35,11 +37,11 @@ class MongoConnector:
         # Get connection string from environment variable
         self.mongo_uri = os.getenv('MCP_MONGO_MEMORY_CONNECTION')
         if not self.mongo_uri:
-            return {
-                'success': False,
-                'error': 'MCP_MONGO_MEMORY_CONNECTION environment variable not set',
-                'details': 'The mongo-memory MCP server requires a MongoDB connection string',
-                'setup_instructions': {
+            return create_error_response(
+                'MCP_MONGO_MEMORY_CONNECTION environment variable not set',
+                'The mongo-memory MCP server requires a MongoDB connection string',
+                'Set the environment variable in your MCP configuration',
+                setup_instructions={
                     'step_1': 'Set the environment variable in your MCP configuration',
                     'step_2': 'Add this to your MCP server config:',
                     'example': {
@@ -49,7 +51,7 @@ class MongoConnector:
                     },
                     'mongodb_atlas': 'For free MongoDB Atlas setup, see: https://github.com/santahate/mcp-mongo-memory#configuration',
                 },
-            }
+            )
         return {'success': True, 'connection_string': self.mongo_uri}
 
     def is_configured(self) -> bool:
@@ -123,17 +125,17 @@ class MongoConnector:
 
         self.client = self.get_connection()
         if not self.test_connection():
-            self.config_error = {
-                'success': False,
-                'error': "Can't connect to MongoDB",
-                'details': 'Connection string is set but MongoDB server is not reachable',
-                'troubleshooting': {
+            self.config_error = create_error_response(
+                "Can't connect to MongoDB",
+                'Connection string is set but MongoDB server is not reachable',
+                'Check MongoDB server status and connection settings',
+                troubleshooting={
                     'check_1': 'Verify MongoDB server is running',
                     'check_2': 'Check connection string format',
                     'check_3': 'Verify network connectivity',
                     'check_4': 'Check MongoDB Atlas IP whitelist if using Atlas',
                 },
-            }
+            )
             return
 
         # Initialize rules and indexes
@@ -325,10 +327,11 @@ class MongoConnector:
             # Validate all entities first
             for entity in entities:
                 if not self._validate_entity(entity):
-                    return {
-                        'success': False,
-                        'error': f'Invalid entity structure: {entity}',
-                    }
+                    return create_error_response(
+                        'Invalid entity structure',
+                        f'Entity validation failed: {entity}',
+                        'Ensure entity has required "name" field and valid structure',
+                    )
 
             database = self.client[self.AGENT_MEMORY_DB]
             collection = database[self.ENTITY_COLLECTION]
@@ -339,20 +342,19 @@ class MongoConnector:
                 entity['updated_at'] = datetime.now(timezone.utc)
 
             result = collection.insert_many(entities)
-            return {
-                'success': True,
-                'created': len(result.inserted_ids),
-            }
+            return create_success_response(created=len(result.inserted_ids))
         except DuplicateKeyError as e:
-            return {
-                'success': False,
-                'error': f'Duplicate key error: {e!s}',
-            }
+            return create_error_response(
+                'Duplicate key error',
+                f'Entity with this name already exists: {e!s}',
+                'Use update_entity to modify existing entities or choose a different name',
+            )
         except PyMongoError as e:
-            return {
-                'success': False,
-                'error': str(e),
-            }
+            return create_error_response(
+                'Database error',
+                f'Failed to create entities: {e!s}',
+                'Check MongoDB connection and entity data format',
+            )
 
     def create_relationship(
         self,
@@ -401,12 +403,12 @@ class MongoConnector:
                     key, value = prop.split('=')
                     rel_properties[key.strip()] = value.strip()
             except ValueError:
-                return {
-                    'success': False,
-                    'error': 'Invalid relationship_type format',
-                    'details': f'Expected format: "type:key1=value1,key2=value2", got: "{relationship_type}"',
-                    'example': 'works_at:position=developer,department=RnD',
-                }
+                return create_error_response(
+                    'Invalid relationship_type format',
+                    f'Expected format: "type:key1=value1,key2=value2", got: "{relationship_type}"',
+                    'Use format like "works_at:position=developer,department=RnD"',
+                    example='works_at:position=developer,department=RnD',
+                )
 
         database = self.client[self.AGENT_MEMORY_DB]
         collection = database['relationships']
@@ -430,10 +432,11 @@ class MongoConnector:
                 'inserted_id': str(result.inserted_id),
             }
         except PyMongoError as e:
-            return {
-                'error': str(e),
-                'details': 'A MongoDB-related error occurred during relationship creation.',
-            }
+            return create_error_response(
+                'Database error',
+                f'Failed to create relationship: {e!s}',
+                'Check MongoDB connection and relationship data',
+            )
 
     def _check_relationship_indexes(self) -> bool:
         """Check if required relationship indexes exist.
@@ -522,17 +525,17 @@ class MongoConnector:
             entity = collection.find_one({self.AGENT_MEMORY_INDEX_FIELD: name})
             if entity:
                 return entity
-            return {
-                'success': False,
-                'error': 'Entity not found',
-                'details': f"No entity with name '{name}' exists",
-            }
+            return create_error_response(
+                'Entity not found',
+                f"No entity with name '{name}' exists",
+                'Check entity name spelling or create the entity first',
+            )
         except PyMongoError as e:
-            return {
-                'success': False,
-                'error': f'Database error: {e}',
-                'details': 'Failed to retrieve entity from database',
-            }
+            return create_error_response(
+                'Database error',
+                f'Failed to retrieve entity: {e!s}',
+                'Check MongoDB connection and try again',
+            )
 
     def update_entity(
         self,
@@ -572,16 +575,18 @@ class MongoConnector:
             )
 
             if result.matched_count > 0 or (upsert and result.upserted_id):
-                return {'success': True}
-            return {
-                'success': False,
-                'error': 'Entity not found',
-            }
+                return create_success_response()
+            return create_error_response(
+                'Entity not found',
+                f"No entity with name '{name}' exists",
+                'Check entity name or use upsert=True to create if not exists',
+            )
         except PyMongoError as e:
-            return {
-                'success': False,
-                'error': str(e),
-            }
+            return create_error_response(
+                'Database error',
+                f'Failed to update entity: {e!s}',
+                'Check MongoDB connection and update data format',
+            )
 
     def delete_entity(self, name: str) -> Mapping:
         """Delete a single entity by its name.
@@ -604,16 +609,18 @@ class MongoConnector:
             result = collection.delete_one({self.AGENT_MEMORY_INDEX_FIELD: name})
 
             if result.deleted_count > 0:
-                return {'success': True}
-            return {
-                'success': False,
-                'error': 'Entity not found',
-            }
+                return create_success_response()
+            return create_error_response(
+                'Entity not found',
+                f"No entity with name '{name}' exists",
+                'Check entity name spelling',
+            )
         except PyMongoError as e:
-            return {
-                'success': False,
-                'error': str(e),
-            }
+            return create_error_response(
+                'Database error',
+                f'Failed to delete entity: {e!s}',
+                'Check MongoDB connection and try again',
+            )
 
     def find_entities(self, query: dict[str, Any], limit: int = 10) -> dict[str, Any]:
         """Find entities matching the query criteria.
@@ -630,17 +637,19 @@ class MongoConnector:
             TypeError: If query is not a dictionary
         """
         if not query:
-            return {
-                'success': False,
-                'error': 'Query dictionary cannot be empty',
-                'entities': [],
-            }
+            return create_error_response(
+                'Query dictionary cannot be empty',
+                'Provide a non-empty query dictionary to search entities',
+                'Example: {"type": "user"} or {"name": "entity_name"}',
+                entities=[],
+            )
         if not isinstance(query, dict):
-            return {
-                'success': False,
-                'error': f'Query must be a dictionary, got {type(query)}',
-                'entities': [],
-            }
+            return create_error_response(
+                'Invalid query type',
+                f'Query must be a dictionary, got {type(query).__name__}',
+                'Provide a dictionary with search criteria',
+                entities=[],
+            )
 
         # Check configuration first
         config_error = self._check_configuration()
@@ -654,17 +663,16 @@ class MongoConnector:
             cursor = collection.find(query)
             entities = list(cursor.limit(limit))
         except PyMongoError as e:
-            return {
-                'success': False,
-                'error': f'Database error: {e}',
-                'entities': [],
-                'details': 'Failed to find entities in database',
-            }
-        return {
-            'success': True,
-            'entities': entities,
-            'count': len(entities),
-        }
+            return create_error_response(
+                'Database error',
+                f'Failed to find entities: {e!s}',
+                'Check MongoDB connection and query format',
+                entities=[],
+            )
+        return create_success_response(
+            entities=entities,
+            count=len(entities),
+        )
 
     def get_relationships(
         self,
@@ -695,20 +703,24 @@ class MongoConnector:
             OperationError: If database operation fails
         """
         if not 1 <= limit <= self.MAX_RELATIONSHIPS_LIMIT:
-            return {
-                'error': f'Limit must be between 1 and {self.MAX_RELATIONSHIPS_LIMIT}',
-                'relationships': [],
-                'total_count': 0,
-                'page_info': {'has_next': False, 'next_cursor': None},
-            }
+            return create_error_response(
+                'Invalid limit value',
+                f'Limit must be between 1 and {self.MAX_RELATIONSHIPS_LIMIT}, got {limit}',
+                f'Use a value between 1 and {self.MAX_RELATIONSHIPS_LIMIT}',
+                relationships=[],
+                total_count=0,
+                page_info={'has_next': False, 'next_cursor': None},
+            )
 
         if query is not None and not isinstance(query, dict):
-            return {
-                'error': 'Query must be a dictionary',
-                'relationships': [],
-                'total_count': 0,
-                'page_info': {'has_next': False, 'next_cursor': None},
-            }
+            return create_error_response(
+                'Invalid query type',
+                f'Query must be a dictionary, got {type(query).__name__}',
+                'Provide a dictionary with search criteria or None for all relationships',
+                relationships=[],
+                total_count=0,
+                page_info={'has_next': False, 'next_cursor': None},
+            )
 
         # Check configuration first
         config_error = self._check_configuration()
@@ -745,12 +757,14 @@ class MongoConnector:
                 },
             }
         except PyMongoError as e:
-            return {
-                'error': f'Database operation failed: {e!s}',
-                'relationships': [],
-                'total_count': 0,
-                'page_info': {'has_next': False, 'next_cursor': None},
-            }
+            return create_error_response(
+                'Database error',
+                f'Failed to get relationships: {e!s}',
+                'Check MongoDB connection and try again',
+                relationships=[],
+                total_count=0,
+                page_info={'has_next': False, 'next_cursor': None},
+            )
 
     def delete_relationship(
         self,
@@ -783,19 +797,21 @@ class MongoConnector:
 
         # Validate entities exist
         if not self._get_entity_internal(from_entity):
-            return {
-                'acknowledged': False,
-                'deleted_count': 0,
-                'error': 'Source entity not found',
-                'details': f"Entity '{from_entity}' does not exist",
-            }
+            return create_error_response(
+                'Source entity not found',
+                f"Entity '{from_entity}' does not exist",
+                'Check entity name spelling or create the entity first',
+                acknowledged=False,
+                deleted_count=0,
+            )
         if not self._get_entity_internal(to_entity):
-            return {
-                'acknowledged': False,
-                'deleted_count': 0,
-                'error': 'Target entity not found',
-                'details': f"Entity '{to_entity}' does not exist",
-            }
+            return create_error_response(
+                'Target entity not found',
+                f"Entity '{to_entity}' does not exist",
+                'Check entity name spelling or create the entity first',
+                acknowledged=False,
+                deleted_count=0,
+            )
 
         # Parse relationship type and properties
         type_parts = relationship_type.split(':', 1)
@@ -808,13 +824,14 @@ class MongoConnector:
                     key, value = prop.split('=')
                     properties[key.strip()] = value.strip()
             except ValueError:
-                return {
-                    'acknowledged': False,
-                    'deleted_count': 0,
-                    'error': 'Invalid relationship_type format',
-                    'details': f'Expected format: "type:key1=value1,key2=value2", got: "{relationship_type}"',
-                    'example': 'works_at:position=developer,department=RnD',
-                }
+                return create_error_response(
+                    'Invalid relationship_type format',
+                    f'Expected format: "type:key1=value1,key2=value2", got: "{relationship_type}"',
+                    'Use format like "works_at:position=developer,department=RnD"',
+                    acknowledged=False,
+                    deleted_count=0,
+                    example='works_at:position=developer,department=RnD',
+                )
 
         # Prepare query
         query = {
@@ -836,8 +853,10 @@ class MongoConnector:
                 'error': None,
             }
         except PyMongoError as e:
-            return {
-                'acknowledged': False,
-                'deleted_count': 0,
-                'error': str(e),
-            }
+            return create_error_response(
+                'Database error',
+                f'Failed to delete relationship: {e!s}',
+                'Check MongoDB connection and try again',
+                acknowledged=False,
+                deleted_count=0,
+            )

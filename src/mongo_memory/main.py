@@ -8,6 +8,7 @@ from mcp.server import FastMCP
 from mongo_memory.constants import instructions, user_guide
 
 from .mongo_connector import MongoConnector
+from .response_utils import create_error_response
 
 mcp = FastMCP(
     name='mongo-memory',
@@ -169,12 +170,11 @@ def create_relationship(
                         key, value = prop.split('=', 1)
                         properties[key.strip()] = value.strip()
         except ValueError:
-            return {
-                'success': False,
-                'error': 'Invalid relationship_type format',
-                'message': f'Expected format: "type:key1=value1,key2=value2", but got: "{relationship_type}"',
-                'details': "Use format like 'works_at:position=developer,department=RnD' or simple 'knows'",
-            }
+            return create_error_response(
+                'Invalid relationship_type format',
+                f'Expected format: "type:key1=value1,key2=value2", but got: "{relationship_type}"',
+                "Use format like 'works_at:position=developer,department=RnD' or simple 'knows'",
+            )
 
     return db.create_relationship(from_entity, to_entity, rel_type, properties)
 
