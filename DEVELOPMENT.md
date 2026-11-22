@@ -1,395 +1,151 @@
 # Development Guide
 
-## Project Structure
+## Scope and workflow
 
-```
-.
-├── main.py              # Main application entry point
-├── mongo_connector.py   # MongoDB connection and operations
-├── requirements.txt     # Project dependencies
-├── pyproject.toml      # Project metadata and core dependencies
-├── uv.lock            # Locked dependencies versions
-└── .env                # Environment configuration
-```
+Work on `dev`. Local development and the test workflow do not publish packages
+or change the project version. The existing `release.yml` remains a separate
+release workflow: merging `dev` into `master` triggers versioning and publication
+to TestPyPI and PyPI. Do not merge that PR during this maintenance work.
 
-## Development Environment Setup
+## Project layout
 
-1. Install uv:
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-2. Create and activate virtual environment:
-```bash
-uv venv
-source .venv/bin/activate  # On Unix-like systems
-# or
-.venv\Scripts\activate     # On Windows
-```
-
-3. Install dependencies:
-```bash
-uv pip install -r requirements.txt
+```text
+src/mongo_memory/
+  main.py                 MCPServer tools and server entry point
+  cli.py                  python -m mongo_memory.cli entry point
+  mongo_connector.py      MongoDB operations, validation and indexes
+  response_utils.py       Success/error responses and MCP JSON serialization
+  constants/              Server instructions and usage guide
+tests/
+  conftest.py             Guarded, isolated MongoDB fixture
+  test_entities.py        Entity CRUD and batch validation
+  test_relationships.py   Relationship CRUD, parsing and indexes
+  test_configuration.py   Configuration, structure and database failures
+  test_mcp.py             Real MCP client/server round trip over stdio
+.github/workflows/
+  tests.yml               Tests and lint, no publication
+  release.yml             Existing release automation
 ```
 
-4. Install development dependencies:
-```bash
-uv pip install pytest pytest-cov black mypy ruff
-```
-
-## MCP Service Development
-
-### Running as MCP Service
-
-The server can be run as an MCP service using the following command:
-```bash
-uv run --with mcp[cli] --with pymongo mcp run main.py
-```
-
-### Adding New Operations
-
-1. Define new operation in `main.py`:
-```python
-@mcp.tool()
-def operation_name(param1: type1, param2: type2) -> return_type:
-    """Operation description"""
-    return db.operation_name(param1, param2)
-```
-
-2. Implement operation in `mongo_connector.py`:
-```python
-def operation_name(self, param1: type1, param2: type2) -> return_type:
-    """Implementation details"""
-    # Implementation
-```
-
-3. Add tests for both the MCP interface and MongoDB implementation
-
-4. Update documentation with new operation details
-
-## Development Plan
-
-### Phase 1: Core Infrastructure (Current)
-- [x] Basic MongoDB connection
-- [x] Environment configuration
-- [x] Basic entity operations
-- [x] Memory usage guidelines
-- [ ] Basic relationship operations
-- [ ] Unit tests setup
-
-### Phase 2: Graph Operations
-- [ ] Advanced entity operations
-  - [ ] Batch operations
-  - [ ] Complex queries
-  - [ ] Validation
-- [ ] Advanced relationship operations
-  - [ ] Bidirectional relationships
-  - [ ] Relationship properties
-  - [ ] Relationship validation
-- [ ] Graph traversal operations
-  - [ ] Path finding
-  - [ ] Subgraph extraction
-  - [ ] Graph analytics
-
-### Phase 3: API and Integration
-- [ ] REST API implementation
-- [ ] WebSocket support for real-time updates
-- [ ] Authentication and authorization
-- [ ] Rate limiting
-- [ ] API documentation
-- [ ] Integration tests
-
-### Phase 4: Performance and Scaling
-- [ ] Caching layer
-- [ ] Query optimization
-- [ ] Index optimization
-- [ ] Bulk operations
-- [ ] Sharding strategy
-- [ ] Performance monitoring
-
-### Phase 5: Additional Features
-- [ ] Graph versioning
-- [ ] Audit logging
-- [ ] Data export/import
-- [ ] Backup/restore functionality
-- [ ] Admin interface
-- [ ] Memory analytics dashboard
-
-## Memory Management Guidelines
-
-### Entity Structure Best Practices
-
-1. **Consistent Naming**
-   - Use descriptive prefixes for entity types
-   - Follow consistent naming patterns
-   - Include relevant identifiers
-
-2. **Temporal Tracking**
-   - Always include creation timestamps
-   - Track last modification time
-   - Maintain update history when relevant
-
-3. **Contextual Information**
-   - Store relevant context with entities
-   - Include source of information
-   - Track confidence levels
-
-4. **Relationship Management**
-   - Use explicit relationship entities
-   - Track relationship types
-   - Include relationship metadata
-
-### Memory Usage Patterns
-
-1. **Information Storage**
-```python
-def store_observation(observation_type: str, data: dict):
-    """Store new observation with context."""
-    return db.create_entities([{
-        "name": f"obs_{observation_type}_{uuid.uuid4()}",
-        "type": "observation",
-        "data": {
-            **data,
-            "observed_at": datetime.now(),
-            "confidence": calculate_confidence(data)
-        }
-    }])
-```
-
-2. **Context Retrieval**
-```python
-def get_relevant_context(query: dict) -> list[dict]:
-    """Get context-relevant information."""
-    return db.find_entities({
-        **query,
-        "data.created_at": {
-            "$gte": datetime.now() - timedelta(days=7)
-        }
-    })
-```
-
-3. **Relationship Tracking**
-```python
-def track_relationship(
-    from_entity: str,
-    to_entity: str,
-    rel_type: str,
-    metadata: dict
-):
-    """Track relationship between entities."""
-    return db.create_entities([{
-        "name": f"rel_{from_entity}_{to_entity}_{rel_type}",
-        "type": "relationship",
-        "data": {
-            "from": from_entity,
-            "to": to_entity,
-            "type": rel_type,
-            "metadata": metadata,
-            "created_at": datetime.now()
-        }
-    }])
-```
-
-### Memory Maintenance
-
-1. **Regular Cleanup**
-   - Archive old data
-   - Remove obsolete relationships
-   - Update confidence scores
-
-2. **Consistency Checks**
-   - Validate relationship integrity
-   - Check for orphaned entities
-   - Ensure temporal consistency
-
-3. **Performance Optimization**
-   - Index frequently queried fields
-   - Optimize query patterns
-   - Monitor memory usage
-
-## MongoDB Optimization Principles
-
-### Offloading Operations to MongoDB
-The project follows a key principle of maximizing the use of MongoDB's native capabilities to minimize computational load on the AI agent:
-
-1. **Query Operations**
-   - Use MongoDB aggregation pipeline for complex queries
-   - Implement server-side filtering and sorting
-   - Utilize MongoDB's text search capabilities
-   - Apply proper indexing strategies
-
-2. **Data Processing**
-   - Perform data aggregation on MongoDB level
-   - Use MongoDB's built-in operators for calculations
-   - Implement pagination on database level
-   - Utilize MongoDB's projection to return only necessary fields
-
-3. **Benefits**
-   - Reduced context window usage for AI agent
-   - Minimized memory footprint
-   - Improved query performance
-   - Better scalability
-   - Reduced network traffic
-
-### Implementation Guidelines
-```python
-# Instead of:
-def get_filtered_entities(self, criteria: dict) -> List[Entity]:
-    """Bad: Fetches all entities and filters in Python"""
-    entities = self.db.entities.find({})
-    return [e for e in entities if self._matches_criteria(e, criteria)]
-
-# Do this:
-def get_filtered_entities(self, criteria: dict) -> List[Entity]:
-    """Good: Filters directly in MongoDB"""
-    return list(self.db.entities.find(criteria))
-```
-
-## Technical Specifications
-
-### Entity Structure
-```python
-{
-    "_id": ObjectId,
-    "name": str,
-    "type": str,
-    "properties": dict,
-    "created_at": datetime,
-    "updated_at": datetime,
-    "searchable_text": str,  # For text search optimization
-    "metadata": {
-        "last_accessed": datetime,
-        "access_count": int,
-        "version": int
-    }
-}
-```
-
-### Relationship Structure
-```python
-{
-    "_id": ObjectId,
-    "from_entity": ObjectId,
-    "to_entity": ObjectId,
-    "type": str,
-    "properties": dict,
-    "created_at": datetime,
-    "updated_at": datetime
-}
-```
-
-### Indexes
-- `entities`: 
-  - `name` (unique)
-  - `type`
-  - `searchable_text` (text index)
-  - `properties.key` (for frequently queried properties)
-  - `created_at`
-- `relationships`:
-  - `(from_entity, to_entity, type)` (unique compound)
-  - `from_entity`
-  - `to_entity`
-  - `type`
-  - `properties.key` (for frequently queried properties)
-
-### Query Optimization Examples
-```python
-# Example of optimized aggregation pipeline
-def get_entity_statistics(self, entity_type: str) -> Dict:
-    """Gets entity statistics using MongoDB aggregation"""
-    return self.db.entities.aggregate([
-        {"$match": {"type": entity_type}},
-        {"$group": {
-            "_id": None,
-            "count": {"$sum": 1},
-            "avg_connections": {"$avg": "$metadata.connections_count"},
-            "latest_update": {"$max": "$updated_at"}
-        }}
-    ]).next()
-```
-
-## Database Design
-
-### Collections
-- `entities`: Stores all entities
-- `relationships`: Stores all relationships
-- `metadata`: Stores graph metadata and configuration
-
-## Testing Strategy
-
-1. Unit Tests
-   - Entity operations
-   - Relationship operations
-   - Graph operations
-   - Validation logic
-
-2. Integration Tests
-   - API endpoints
-   - Database operations
-   - Real-time updates
-
-3. Performance Tests
-   - Load testing
-   - Stress testing
-   - Scalability testing
-
-## Development Workflow
-
-1. Create a new branch for your feature
-2. Write tests first (TDD approach)
-3. Implement the feature
-4. Run tests:
-```bash
-pytest
-```
-
-5. Run linters and type checks:
-```bash
-ruff check .
-black .
-mypy .
-```
-
-6. Update documentation if needed
-7. Submit pull request
-
-## Code Style
-
-- Follow PEP 8
-- Use type hints
-- Document all public functions and classes
-- Keep functions small and focused
-- Write meaningful commit messages
-
-## Common Development Tasks
-
-### Adding New Dependencies
+Python >=3.12 and `uv` are required. `pyproject.toml` defines runtime and development
+dependencies; `uv.lock` records their resolved versions.
 
 ```bash
-uv pip install package_name
-uv pip freeze > requirements.txt
+uv sync --locked
 ```
 
-### Running Tests with Coverage
+## Local test database
+
+Tests require a real MongoDB. Start a disposable instance bound to loopback only:
 
 ```bash
-pytest --cov=src tests/
+docker run -d --rm --name mcp-mongo-memory-test \
+  -p 127.0.0.1:27017:27017 mongo:7
 ```
 
-### Formatting Code
+Once MongoDB is ready:
 
 ```bash
-black .
+uv run --locked pytest -q
+uv run --locked ruff check .
 ```
 
-### Type Checking
+Tests use `mongodb://127.0.0.1:27017/mongo_memory_test` by default, **never** the
+application's `MCP_MONGO_MEMORY_CONNECTION`. To select another disposable database:
 
 ```bash
-mypy .
+export MCP_MONGO_MEMORY_TEST_CONNECTION='mongodb://127.0.0.1:27017/mongo_memory_test_local'
+uv run --locked pytest -q
 ```
 
-### Linting
+**The fixture drops the test database before and after every integration test.**
+It refuses database names not starting with `mongo_memory_test`. Never point it
+at valuable data. Run suites serially or use distinct test databases for concurrent
+runs. Structure tests also use this isolated database, not the normal `memory.sys`.
+
+Stop and remove the disposable instance when finished:
 
 ```bash
-ruff check .
+docker stop mcp-mongo-memory-test
 ```
+
+## Run the local MCP server
+
+```bash
+MCP_MONGO_MEMORY_CONNECTION='mongodb://127.0.0.1:27017/agent_memory' \
+  uv run --locked mongo-memory
+```
+
+The default transport is stdio; connect an MCP client rather than typing commands
+into the process. `uv run --locked python -m mongo_memory.cli` is equivalent.
+`tests/test_mcp.py` launches this entry point and verifies tool discovery, entity
+creation/retrieval and relationship parsing through the actual MCP protocol.
+
+## Official MCP SDK v2 migration
+
+The runtime dependency is `mcp[cli]>=2.3.0,<3`, with 2.3.0 resolved in `uv.lock`.
+The server now imports `MCPServer` from `mcp.server` instead of `FastMCP` and
+reports the application's version explicitly. Tool names, arguments and the
+stdio transport are unchanged; synchronous handlers run in SDK worker threads,
+which the shared PyMongo client supports.
+
+Client tests use v2's snake_case fields (`is_error`, `structured_content`,
+`input_schema`, etc.) and exercise all ten tools through both the legacy
+`initialize` handshake and the modern `discover` handshake. BSON serialization
+is handled before SDK output validation. No v1 import fallback or dependency
+on the separate third-party `fastmcp` package is introduced.
+
+Reference: [official v1→v2 migration guide](https://py.sdk.modelcontextprotocol.io/migration/).
+
+## Data and response contracts
+
+- The database in the connection URI stores `entities` and `relationships`.
+  If the URI omits a database, the historical `agent_memory` default is used.
+  **Previously the URI database was ignored.** Existing installations with a
+  different database in their URI must explicitly select `agent_memory` to keep
+  reading their existing data; no automatic migration is performed.
+- Entities require a unique string `name`. Other fields remain free-form.
+  Creation adds UTC `created_at` and `updated_at`. Updates accept MongoDB
+  operator dictionaries, such as `{"$set": {"data.value": 1}}`.
+- Entity creation and update do not mutate caller-owned dictionaries.
+- `create_entities` validates the entire batch before insertion. MongoDB's ordered
+  `insert_many` is **not atomic**: a database error can leave an inserted prefix.
+  Bulk-write error responses include `created` (`nInserted`). Other database
+  failures may leave the outcome uncertain; inspect the data before retrying.
+- Missing entities and invalid inputs return error dictionaries rather than
+  raising application validation exceptions. Success responses use
+  `{"success": true, ...}`; errors use `{"success": false, "error": ..., "message": ...}`.
+- `get_entity` returns the entity document on success. `find_entities` returns
+  `{"success": true, "entities": [...], "count": N}`. Its limit must be a positive
+  integer; its query must be a non-empty dictionary.
+- Relationships store source/target **names**, a type, properties and a creation
+  timestamp. The unique `(from_entity, to_entity, type)` index allows one edge per
+  pair/type, regardless of properties. That constraint is unchanged.
+- Create and delete share one parser for `type:key=value,key2=value2`.
+  `knows` and `knows:` are valid; malformed properties are rejected. Values may
+  contain `=`, but not commas (there is no escaping syntax).
+- Index creation is idempotent at startup. Legacy `from_name`/`to_name` indexes are
+  no longer created; existing legacy indexes are not automatically dropped.
+- `get_memory_structure` reads the historical `memory.sys` document matching
+  `{"structure": true}`. A missing document returns `{}`. Configuration and read
+  failures return error responses. It does not infer a schema from entities.
+- Read tools encode BSON values as MongoDB Extended JSON at the MCP boundary,
+  e.g. `{"$oid": "..."}` and `{"$date": "..."}`. The connector itself returns
+  native MongoDB values to Python callers.
+
+## Deliberately deferred
+
+No new tools, cursor pagination, relationship-query parameters or transaction
+requirements are introduced. `get_relationships` still exposes only `limit`
+(1–100) over MCP. Its existing `page_info` is informational: there is no accepted
+cursor argument, so callers cannot request the next page. The connector's
+existing Python query argument remains available.
+
+Entity deletion/renaming does not cascade to relationships. Graph lifecycle
+changes need a separate decision; they are not part of this maintenance pass.
+
+## CI
+
+`tests.yml` runs `uv sync --locked`, Ruff and pytest with MongoDB 7 on Python
+3.12/3.13 for pushes to `dev` and PRs targeting `dev`/`master`. It has read-only
+repository permissions and no publication steps or package tokens.

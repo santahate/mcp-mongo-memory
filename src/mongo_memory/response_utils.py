@@ -1,6 +1,15 @@
 """Response utilities for standardized error and success responses."""
 
+from collections.abc import Mapping
+import json
 from typing import Any
+
+from bson import json_util
+
+
+def to_json_safe(value: Mapping[str, Any]) -> dict[str, Any]:
+    """Encode MongoDB values as JSON-compatible Extended JSON for MCP responses."""
+    return json.loads(json_util.dumps(value))
 
 
 def create_error_response(

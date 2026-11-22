@@ -2,28 +2,6 @@
 
 import pytest
 
-from mongo_memory.mongo_connector import MongoConnector
-
-
-@pytest.fixture(autouse=True)
-def cleanup_db():
-    """Clean up database before each test."""
-    connector = MongoConnector()
-    db = connector.client[connector.AGENT_MEMORY_DB]
-    db.drop_collection(connector.ENTITY_COLLECTION)
-    yield
-    db.drop_collection(connector.ENTITY_COLLECTION)
-
-
-@pytest.fixture
-def mongo_connector():
-    """Create MongoConnector instance for testing."""
-    connector = MongoConnector()
-    # Clean up relationships collection before each test
-    database = connector.client[connector.AGENT_MEMORY_DB]
-    database['relationships'].delete_many({})
-    return connector
-
 
 @pytest.fixture
 def test_entities(mongo_connector):
@@ -112,14 +90,15 @@ def test_get_relationships_limit(mongo_connector, test_entities):
 def test_get_relationships_validation(mongo_connector):
     """Test input validation for get_relationships."""
     # Test invalid limit
-    with pytest.raises(ValueError):
-        mongo_connector.get_relationships(limit=0)
-    with pytest.raises(ValueError):
-        mongo_connector.get_relationships(limit=101)
+    for limit in (0, 101, -1, True, '10', 1.5):
+        result = mongo_connector.get_relationships(limit=limit)
+        assert result['success'] is False
+        assert result['error'] == 'Invalid limit value'
 
     # Test invalid query
-    with pytest.raises(TypeError):
-        mongo_connector.get_relationships(query='invalid')
+    result = mongo_connector.get_relationships(query='invalid')
+    assert result['success'] is False
+    assert result['error'] == 'Invalid query type'
 
 
 def test_delete_relationship_basic(mongo_connector, test_entities):
@@ -140,7 +119,7 @@ def test_delete_relationship_basic(mongo_connector, test_entities):
 
     assert result['acknowledged'] is True
     assert result['deleted_count'] == 1
-    assert result['error'] is None
+    assert result['success'] is True
 
     # Verify deletion
     result = mongo_connector.get_relationships({
@@ -179,20 +158,61 @@ def test_delete_relationship_with_properties(mongo_connector, test_entities):
     assert result['total_count'] == 0
 
 
-def test_delete_relationship_validation(mongo_connector):
+def test_delete_relationship_validation(mongo_connector, test_entities):
     """Test input validation for delete_relationship."""
     # Test non-existent entities
-    with pytest.raises(ValueError):
-        mongo_connector.delete_relationship(
-            from_entity='non_existent',
-            to_entity='test_module_2',
-            relationship_type='imports',
-        )
+    result = mongo_connector.delete_relationship(
+        from_entity='non_existent',
+        to_entity='test_module_2',
+        relationship_type='imports',
+    )
+    assert result['success'] is False
+    assert result['error'] == 'Source entity not found'
 
     # Test invalid relationship type format
-    with pytest.raises(ValueError):
-        mongo_connector.delete_relationship(
-            from_entity='test_module_1',
-            to_entity='test_module_2',
-            relationship_type='imports:invalid_format',
-        )
+    result = mongo_connector.delete_relationship(
+        from_entity='test_module_1',
+        to_entity='test_module_2',
+        relationship_type='imports:invalid_format',
+    )
+    assert result['success'] is False
+    assert result['error'] == 'Invalid relationship_type format'
+
+
+@pytest.mark.parametrize('relationship_type', ['', ':key=value', 'imports:invalid', 'imports:=value', 'imports:key=v,', None])
+def test_relationship_format_rejected(mongo_connector, test_entities, relationship_type):
+    for operation in (mongo_connector.create_relationship, mongo_connector.delete_relationship):
+        result = operation('test_module_1', 'test_module_2', relationship_type)
+        assert result['success'] is False
+        assert result['error'] == 'Invalid relationship_type format'
+
+
+@pytest.mark.parametrize('relationship_type', ['knows', 'knows:', 'knows:key=a=b'])
+def test_relationship_round_trip(mongo_connector, test_entities, relationship_type):
+    result = mongo_connector.create_relationship('test_module_1', 'test_module_2', relationship_type)
+    assert result['success'] is True
+    result = mongo_connector.delete_relationship('test_module_1', 'test_module_2', relationship_type)
+    assert result['success'] is True
+    assert result['deleted_count'] == 1
+
+
+def test_relationship_missing_entity(mongo_connector, test_entities):
+    for source, target, role in [('missing', 'test_module_2', 'Source'), ('test_module_1', 'missing', 'Target')]:
+        result = mongo_connector.create_relationship(source, target, 'knows')
+        assert result['success'] is False
+        assert result['error'] == f'{role} entity not found'
+
+
+def test_relationship_duplicate(mongo_connector, test_entities):
+    assert mongo_connector.create_relationship('test_module_1', 'test_module_2', 'knows')['success'] is True
+    result = mongo_connector.create_relationship('test_module_1', 'test_module_2', 'knows:key=other')
+    assert result['success'] is False
+    assert result['error'] == 'Duplicate key error'
+
+
+def test_relationship_indexes(mongo_connector):
+    collection = mongo_connector.client[mongo_connector.AGENT_MEMORY_DB]['relationships']
+    indexes = collection.index_information()
+    assert 'from_name_1' not in indexes
+    assert 'to_name_1' not in indexes
+    assert indexes['from_entity_1_to_entity_1_type_1']['unique'] is True
