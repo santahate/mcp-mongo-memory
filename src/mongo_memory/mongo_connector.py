@@ -455,8 +455,16 @@ class MongoConnector:
             ):
                 return create_error_response('Invalid update', 'Provide a non-empty operator update; $set must be a dictionary')
             # Copy before adding timestamps so callers can safely reuse their input.
+            now = datetime.now(UTC)
             update = {**update, '$set': dict(update.get('$set', {}))}
-            update['$set'].setdefault('updated_at', datetime.now(UTC))
+            update['$set'].setdefault('updated_at', now)
+            # Default creation time atomically on insert, without conflicting with caller operators.
+            if upsert and not any(
+                isinstance(fields, dict)
+                and ('created_at' in fields or (operator == '$rename' and 'created_at' in fields.values()))
+                for operator, fields in update.items()
+            ):
+                update['$setOnInsert'] = {**update.get('$setOnInsert', {}), 'created_at': now}
 
             result = collection.update_one(
                 {self.AGENT_MEMORY_INDEX_FIELD: name},

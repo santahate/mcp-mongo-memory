@@ -1,8 +1,12 @@
 """Tests for basic entity operations."""
 
+from copy import deepcopy
 from datetime import UTC, datetime
+from unittest.mock import MagicMock
 
 import pytest
+
+from mongo_memory.mongo_connector import MongoConnector
 
 
 def test_create_entities(mongo_connector):
@@ -76,6 +80,66 @@ def test_update_entity(mongo_connector):
     updated = mongo_connector.get_entity('test_entity')
     assert updated['data']['value'] == 2
     assert 'updated_at' in updated
+
+@pytest.mark.parametrize('operator', ['$set', '$inc', '$setOnInsert'])
+def test_upsert_creation_timestamps(mongo_connector, operator):
+    update = {operator: {'data.value': 1}}
+    assert mongo_connector.update_entity('upserted', update, upsert=True)['success'] is True
+    created = mongo_connector.get_entity('upserted')
+    assert isinstance(created['created_at'], datetime)
+    assert created['created_at'] == created['updated_at']
+
+    assert mongo_connector.update_entity('upserted', {'$inc': {'data.value': 1}}, upsert=True)['success'] is True
+    updated = mongo_connector.get_entity('upserted')
+    assert updated['data']['value'] == 2
+    assert updated['created_at'] == created['created_at']
+    assert updated['updated_at'] >= created['updated_at']
+
+
+@pytest.mark.parametrize('update', [
+    {'$set': {'data.value': 1}},
+    {'$setOnInsert': {'type': 'test'}},
+    {'$setOnInsert': {'created_at': datetime(2020, 1, 1, tzinfo=UTC)}},
+    {'$set': {'created_at': datetime(2020, 1, 1, tzinfo=UTC)}},
+    {'$unset': {'created_at': ''}},
+    {'$rename': {'old_created_at': 'created_at'}},
+])
+def test_upsert_timestamp_update_is_copied(monkeypatch, update):
+    """Unit check: no MongoDB; preserve caller operators and nested dictionaries."""
+    client = MagicMock()
+    client.get_default_database.return_value.name = 'mongo_memory_test'
+    collection = client['mongo_memory_test']['entities']
+    collection.update_one.return_value.matched_count = 0
+    collection.update_one.return_value.upserted_id = 'new'
+    monkeypatch.setenv('MCP_MONGO_MEMORY_CONNECTION', 'mongodb://localhost/mongo_memory_test')
+    monkeypatch.setattr(MongoConnector, 'get_connection', lambda _self: client)
+    original = deepcopy(update)
+    with MongoConnector() as connector:
+        assert connector.update_entity('upserted', update, upsert=True)['success'] is True
+    assert update == original
+    call = collection.update_one.call_args
+    assert call.args[0] == {'name': 'upserted'}
+    assert call.kwargs == {'upsert': True}
+    sent = call.args[1]
+    assert sent['$set']['updated_at'].tzinfo == UTC
+    if 'created_at' in update.get('$setOnInsert', {}):
+        assert sent['$setOnInsert'] == update['$setOnInsert']
+    elif any(key in update for key in ('$unset', '$rename')) or 'created_at' in update.get('$set', {}):
+        assert '$setOnInsert' not in sent
+    else:
+        assert sent['$setOnInsert']['created_at'] == sent['$set']['updated_at']
+        for key, value in update.get('$setOnInsert', {}).items():
+            assert sent['$setOnInsert'][key] == value
+
+
+def test_upsert_preserves_existing_creation_time(mongo_connector):
+    assert mongo_connector.create_entities([{'name': 'existing'}])['success'] is True
+    created = mongo_connector.get_entity('existing')
+    assert mongo_connector.update_entity('existing', {'$set': {'type': 'test'}}, upsert=True)['success'] is True
+    updated = mongo_connector.get_entity('existing')
+    assert updated['created_at'] == created['created_at']
+    assert updated['updated_at'] >= created['updated_at']
+
 
 def test_delete_entity(mongo_connector):
     """Test deleting an entity."""
