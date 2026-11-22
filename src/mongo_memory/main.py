@@ -1,28 +1,24 @@
-"""FastMCP tool for MongoDB memory operations."""
+"""MCP tools for MongoDB memory operations using the official Python SDK v2."""
 
-from collections.abc import Mapping
-from typing import Any, Required, TypedDict
+from typing import Any
 
-from mcp.server import FastMCP
+from mcp.server import MCPServer
 
 from mongo_memory.constants import instructions, user_guide
 
+from . import __version__
 from .mongo_connector import MongoConnector
-from .response_utils import create_error_response
+from .response_utils import to_json_safe
 
-mcp = FastMCP(
+mcp = MCPServer(
     name='mongo-memory',
+    version=__version__,
     instructions=instructions,
 )
 db = MongoConnector()
 
-class FindEntitiesParams(TypedDict):
-    """Parameters for find_entities operation."""
-    query: Required[dict]  # query is required
-    limit: int  # limit is optional
-
 @mcp.tool()
-def create_entities(entities: list[dict]) -> Mapping:
+def create_entities(entities: list[dict]) -> dict[str, Any]:
     """Create entities in memory.
 
     💡 HINT: If this is your first memory operation in this session,
@@ -38,7 +34,7 @@ def create_entities(entities: list[dict]) -> Mapping:
     return db.create_entities(entities)
 
 @mcp.tool()
-def get_entity(name: str) -> dict:
+def get_entity(name: str) -> dict[str, Any]:
     """Get a single entity by its name.
 
     💡 HINT: If this is your first memory operation in this session,
@@ -50,7 +46,7 @@ def get_entity(name: str) -> dict:
     Returns:
         dict: Entity dictionary if found, or error information if not found or configuration issue.
     """
-    return db.get_entity(name)
+    return to_json_safe(db.get_entity(name))
 
 @mcp.tool()
 def get_memory_structure() -> dict[str, Any]:
@@ -62,10 +58,10 @@ def get_memory_structure() -> dict[str, Any]:
     Returns:
         dict: Dictionary containing the current memory structure.
     """
-    return db.get_memory_structure()
+    return to_json_safe(db.get_memory_structure())
 
 @mcp.tool()
-def update_entity(name: str, update: dict, upsert: bool = False) -> Mapping:
+def update_entity(name: str, update: dict, upsert: bool = False) -> dict[str, Any]:
     """Update a single entity by its name.
 
     💡 HINT: If this is your first memory operation in this session,
@@ -82,7 +78,7 @@ def update_entity(name: str, update: dict, upsert: bool = False) -> Mapping:
     return db.update_entity(name, update, upsert)
 
 @mcp.tool()
-def delete_entity(name: str) -> Mapping:
+def delete_entity(name: str) -> dict[str, Any]:
     """Delete a single entity by its name.
 
     💡 HINT: If this is your first memory operation in this session,
@@ -97,7 +93,7 @@ def delete_entity(name: str) -> Mapping:
     return db.delete_entity(name)
 
 @mcp.tool()
-def find_entities(query: dict, limit: int = 10) -> dict:
+def find_entities(query: dict, limit: int = 10) -> dict[str, Any]:
     """Find entities matching the query criteria.
 
     💡 HINT: If this is your first memory operation in this session,
@@ -105,12 +101,12 @@ def find_entities(query: dict, limit: int = 10) -> dict:
 
     Args:
         query (dict): MongoDB query dictionary. Must be a non-empty dictionary.
-        limit (int, optional): Maximum number of entities to return. Defaults to 10.
+        limit (int, optional): Positive maximum number of entities to return. Defaults to 10.
 
     Returns:
         dict: Dictionary with entities list or error information.
     """
-    return db.find_entities(query, limit)
+    return to_json_safe(db.find_entities(query, limit))
 
 @mcp.tool()
 def get_usage_guide() -> str:
@@ -138,7 +134,7 @@ def create_relationship(
     from_entity: str,
     to_entity: str,
     relationship_type: str,  # Format: "type:key1=value1,key2=value2" e.g. "works_at:position=developer,department=RnD"
-) -> Mapping:
+) -> dict[str, Any]:
     """Create a relationship between two entities.
 
     💡 HINT: If this is your first memory operation in this session,
@@ -155,31 +151,10 @@ def create_relationship(
         Mapping: Operation result containing either success details or error information.
             If relationship_type format is invalid, returns error dictionary with details.
     """
-    # Parse relationship type and properties
-    parts = relationship_type.split(':', 1)
-    rel_type = parts[0]
-    properties = {}
-
-    if len(parts) > 1 and parts[1]:
-        try:
-            # Parse properties from key=value pairs
-            props_str = parts[1]
-            if props_str:
-                for prop in props_str.split(','):
-                    if '=' in prop:
-                        key, value = prop.split('=', 1)
-                        properties[key.strip()] = value.strip()
-        except ValueError:
-            return create_error_response(
-                'Invalid relationship_type format',
-                f'Expected format: "type:key1=value1,key2=value2", but got: "{relationship_type}"',
-                "Use format like 'works_at:position=developer,department=RnD' or simple 'knows'",
-            )
-
-    return db.create_relationship(from_entity, to_entity, rel_type, properties)
+    return db.create_relationship(from_entity, to_entity, relationship_type)
 
 @mcp.tool()
-def get_relationships(limit: int = 10) -> Mapping[str, object]:
+def get_relationships(limit: int = 10) -> dict[str, Any]:
     """Get relationships from the database.
 
     💡 HINT: If this is your first memory operation in this session,
@@ -224,10 +199,10 @@ def get_relationships(limit: int = 10) -> Mapping[str, object]:
                 }
             }
     """
-    return db.get_relationships(None, limit)
+    return to_json_safe(db.get_relationships(None, limit))
 
 @mcp.tool()
-def delete_relationship(from_entity: str, to_entity: str, relationship_type: str) -> Mapping[str, object]:
+def delete_relationship(from_entity: str, to_entity: str, relationship_type: str) -> dict[str, Any]:
     """Delete a relationship between two entities.
 
     💡 HINT: If this is your first memory operation in this session,
@@ -245,7 +220,11 @@ def delete_relationship(from_entity: str, to_entity: str, relationship_type: str
 
 def main():
     """Run the MCP server."""
-    mcp.run()
+    try:
+        mcp.run()
+    finally:
+        if db.client is not None:
+            db.client.close()
 
 if __name__ == '__main__':
     main()

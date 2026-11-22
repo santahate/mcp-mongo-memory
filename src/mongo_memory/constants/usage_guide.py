@@ -8,6 +8,8 @@ Before working with memory, it's necessary to get and study its structure:
 ```python
 # First I'll learn the memory structure
 memory_structure = get_memory_structure()
+# An empty database returns {}; establish naming conventions as needed.
+# Configuration/database failures return a dictionary with success=False.
 
 # Now I know the memory structure and can build queries based on it
 # For example, I can determine which entity types are supported
@@ -115,11 +117,12 @@ def remember_observation(observation: dict, category_type: str, category_value: 
 
 # Get observations by category
 def get_observations_by_category(category_type: str, category_value: str) -> list:
-    return memory.find_entities({
+    result = memory.find_entities({
         "type": "observation",
         "data.category_type": category_type,
         "data.category_value": category_value
     })
+    return result.get("entities", [])
 
 # Store fact with context awareness
 def remember_fact(topic: str, fact: str, source: str, context: dict = None):
@@ -141,6 +144,11 @@ def remember_fact(topic: str, fact: str, source: str, context: dict = None):
 ```
 
 ## Basic Operations
+
+Missing entities and invalid inputs return `{"success": false, "error": ..., "message": ...}`.
+Entity reads contain BSON values encoded as Extended JSON, e.g. `{"$oid": "..."}`
+and `{"$date": "..."}`. Batch insertion is not atomic; a bulk-write failure
+includes `created`, the number already inserted. Inspect the data before retrying.
 
 ### Create Entities
 ```python
@@ -199,8 +207,9 @@ result = memory.update_entity(
 
 ### Find Entities
 ```python
-# Find by type
-users = memory.find_entities({"type": "user"})
+# Find by type (the result is an envelope, not a bare list)
+result = memory.find_entities({"type": "user"})
+users = result.get("entities", [])
 
 # Find by field value
 young_users = memory.find_entities({
@@ -282,32 +291,31 @@ def ensure_entity(name: str, data: dict):
 
 # Process entities in batches
 def process_entities(entity_type: str):
-    entities = memory.find_entities({"type": entity_type})
-    for entity in entities:
+    result = memory.find_entities({"type": entity_type})
+    for entity in result.get("entities", []):
         # Process each entity
         pass
 
-# Get full context
-def get_full_context(entity_name: str) -> dict:
+# Get bounded context (not a complete graph traversal)
+def get_bounded_context(entity_name: str) -> dict:
     # Get entity
     entity = memory.get_entity(entity_name)
 
-    # Get relationships
-    relations = memory.find_entities({
-        "type": "relationship",
-        "$or": [
-            {"data.from": entity_name},
-            {"data.to": entity_name}
-        ]
-    })
+    # MCP exposes only a bounded relationship listing, not a query or cursor.
+    # This example may be incomplete when there are more than 100 relationships.
+    result = memory.get_relationships(limit=100)
+    relations = [
+        rel for rel in result.get("relationships", [])
+        if entity_name in (rel["from_entity"], rel["to_entity"])
+    ]
 
     # Get related entities
     related = []
     for rel in relations:
-        if rel["data"]["from"] == entity_name:
-            related.append(memory.get_entity(rel["data"]["to"]))
+        if rel["from_entity"] == entity_name:
+            related.append(memory.get_entity(rel["to_entity"]))
         else:
-            related.append(memory.get_entity(rel["data"]["from"]))
+            related.append(memory.get_entity(rel["from_entity"]))
 
     return {
         "entity": entity,
