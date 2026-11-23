@@ -50,7 +50,9 @@ def get_entity(name: str) -> dict[str, Any]:
 
 @mcp.tool()
 def get_memory_structure() -> dict[str, Any]:
-    """Get the current memory structure.
+    """Read optional memory-structure conventions, not a graph inventory.
+
+    An absent structure document returns {} even when entities or relationships exist.
 
     💡 HINT: If this is your first memory operation in this session,
     consider calling get_usage_guide() first for best practices.
@@ -79,7 +81,10 @@ def update_entity(name: str, update: dict, upsert: bool = False) -> dict[str, An
 
 @mcp.tool()
 def delete_entity(name: str) -> dict[str, Any]:
-    """Delete a single entity by its name.
+    """Delete a single entity by its name, without deleting its relationships.
+
+    Remove incident relationships first while both endpoints still exist.
+    Otherwise dangling edges remain and delete_relationship rejects the missing endpoint.
 
     💡 HINT: If this is your first memory operation in this session,
     consider calling get_usage_guide() first for best practices.

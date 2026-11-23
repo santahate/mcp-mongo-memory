@@ -167,6 +167,7 @@ one, the default is `agent_memory`. **Older versions ignored the URI database**:
 if an existing URI named another database, change it to `/agent_memory` to continue
 using the old data. No data is moved automatically. The legacy memory structure
 is still read from `memory.sys`; if absent, `get_memory_structure` returns `{}`.
+This does not imply an empty graph: entities and relationships can already exist.
 
 `find_entities` returns `{ "success": true, "entities": [...], "count": N }`.
 Missing entities and invalid inputs return `{ "success": false, "error": ..., "message": ... }`.
@@ -177,6 +178,12 @@ Entity batches are validated before writing, but insertion is **not atomic**.
 A bulk-write failure reports `created`, the number already inserted; inspect the
 data before retrying. One relationship is allowed per source/target/type,
 regardless of its properties.
+
+Entity deletion/renaming does **not** cascade to relationships. Remove incident
+edges first while both endpoints exist; otherwise dangling edges remain, and
+`delete_relationship` rejects missing endpoints. The bounded MCP relationship
+listing cannot guarantee complete cleanup when more relationships exist than
+were returned.
 
 ## Development
 
