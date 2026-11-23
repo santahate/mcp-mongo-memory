@@ -141,8 +141,11 @@ requirements are introduced. `get_relationships` still exposes only `limit`
 cursor argument, so callers cannot request the next page. The connector's
 existing Python query argument remains available.
 
-Entity deletion/renaming does not cascade to relationships. Graph lifecycle
-changes need a separate decision; they are not part of this maintenance pass.
+Entity deletion/renaming does not cascade to relationships. Delete incident
+edges first while both endpoints exist; `delete_relationship` rejects missing
+endpoints and cannot remove an already dangling edge. The relationship tests
+cover incoming/outgoing edges, an unrelated edge, and both deletion orders.
+Graph lifecycle changes still need a separate decision; no cascade is introduced.
 
 ## CI
 

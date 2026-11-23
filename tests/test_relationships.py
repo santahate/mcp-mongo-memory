@@ -210,6 +210,28 @@ def test_relationship_duplicate(mongo_connector, test_entities):
     assert result['error'] == 'Duplicate key error'
 
 
+@pytest.mark.parametrize('remove_edges_first', [False, True])
+def test_entity_deletion_relationship_lifecycle(mongo_connector, remove_edges_first):
+    assert mongo_connector.create_entities([{'name': name} for name in ('left', 'center', 'right')])['success'] is True
+    edges = [('left', 'center', 'incoming'), ('center', 'right', 'outgoing'), ('left', 'right', 'unrelated')]
+    for edge in edges:
+        assert mongo_connector.create_relationship(*edge)['success'] is True
+    if remove_edges_first:
+        for edge in edges[:2]:
+            assert mongo_connector.delete_relationship(*edge)['deleted_count'] == 1
+    assert mongo_connector.delete_entity('center')['success'] is True
+    assert mongo_connector.get_entity('center')['error'] == 'Entity not found'
+    remaining = mongo_connector.get_relationships(limit=100)
+    expected = edges[2:] if remove_edges_first else edges
+    assert {(r['from_entity'], r['to_entity'], r['type']) for r in remaining['relationships']} == set(expected)
+    assert remaining['total_count'] == len(expected)
+    if not remove_edges_first:
+        assert mongo_connector.delete_relationship(*edges[0])['error'] == 'Target entity not found'
+        assert mongo_connector.delete_relationship(*edges[1])['error'] == 'Source entity not found'
+        collection = mongo_connector.client[mongo_connector.AGENT_MEMORY_DB]['relationships']
+        assert collection.count_documents({}) == 3
+
+
 def test_relationship_indexes(mongo_connector):
     collection = mongo_connector.client[mongo_connector.AGENT_MEMORY_DB]['relationships']
     indexes = collection.index_information()

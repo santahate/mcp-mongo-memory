@@ -3,16 +3,20 @@ user_guide = """# MongoDB Memory MCP Service Quick Start Guide
 
 ### Obtaining memory structure
 
-Before working with memory, it's necessary to get and study its structure:
+`get_memory_structure` reads optional conventions from the historical `memory.sys`
+structure document. It is not a graph inventory or an enforced entity schema.
+An absent structure document does not mean that entities or relationships are absent.
+Check stored entities and relationships using their respective read tools.
 
 ```python
 # First I'll learn the memory structure
 memory_structure = get_memory_structure()
-# An empty database returns {}; establish naming conventions as needed.
+# {} means no structure document, not an empty graph.
+# Entities and relationships may already exist; do not overwrite or ignore them.
 # Configuration/database failures return a dictionary with success=False.
 
-# Now I know the memory structure and can build queries based on it
-# For example, I can determine which entity types are supported
+# Use any saved conventions when building queries.
+# These are suggested entity types, not a list of stored entities.
 entity_types = memory_structure.get("entity_types", [])
 ```
 
@@ -80,14 +84,16 @@ entity_types = memory_structure.get("entity_types", [])
 
 ```python
 # Store user interaction with context verification
-def remember_interaction(user_id: str, interaction_data: dict, context: dict = None):
-    # If no context provided, agent should ask user:
-    # "How would you like me to categorize this interaction?"
-
+# ask_user_for_categorization() is a host-agent callback, not an MCP tool.
+# The application must implement it to ask the user and return a category string.
+def remember_interaction(user_id: str, interaction_data: dict, context: dict | None = None):
+    context = context or {}
     category_marker = (
-        context.get("category_marker")  # Use existing context if available
-        or "task_123"                   # Or use what user specified
-        or "time_" + current_time       # Or default to timestamp
+        context.get("category_marker")
+        or context.get("task_id")
+        or context.get("topic")
+        or context.get("categorization")
+        or ask_user_for_categorization()
     )
 
     memory.update_entity(
@@ -97,7 +103,7 @@ def remember_interaction(user_id: str, interaction_data: dict, context: dict = N
             "data": {
                 **interaction_data,
                 "category": category_marker,
-                "context": context or "current_context"
+                "context": context
             }
         }},
         upsert=True
@@ -125,10 +131,14 @@ def get_observations_by_category(category_type: str, category_value: str) -> lis
     return result.get("entities", [])
 
 # Store fact with context awareness
-def remember_fact(topic: str, fact: str, source: str, context: dict = None):
+def remember_fact(topic: str, fact: str, source: str, context: dict | None = None):
+    context = context or {}
     category = (
-        context.get("categorization")
-        or ask_user_for_categorization()  # Agent should implement this
+        context.get("category_marker")
+        or context.get("task_id")
+        or context.get("topic")
+        or context.get("categorization")
+        or ask_user_for_categorization()  # Host-agent callback described above
     )
 
     memory.create_entities([{
@@ -224,16 +234,57 @@ companies = memory.find_entities(
 )
 ```
 
-### Delete Entity
+### Relationships
+
+Entities and relationships are stored in separate collections. `find_entities`
+searches only entities: even filtering by `type="relationship"` does not retrieve
+edges created with `create_relationship`. Use the relationship tools instead.
+Both endpoint entities must exist when creating or deleting a relationship.
+
 ```python
-# Delete by name
+# user1 and company1 must already exist.
+result = memory.create_relationship(
+    "user1", "company1", "works_at:position=developer"
+)
+
+# MCP accepts only limit (1..100), not a query or cursor.
+result = memory.get_relationships(limit=100)
+relations = result.get("relationships", [])
+user1_relations = [
+    rel for rel in relations
+    if "user1" in (rel["from_entity"], rel["to_entity"])
+]
+
+# Use the same type and properties to remove this edge.
+result = memory.delete_relationship(
+    "user1", "company1", "works_at:position=developer"
+)
+```
+
+Filtering this bounded list is not a complete graph traversal. If `total_count`
+is greater than the returned list length, the list is incomplete. Do not claim
+that all incident edges have been found. There is no supported cursor argument.
+
+### Delete Entity
+
+`delete_entity` deletes only the entity. It does **not** cascade to incoming or
+outgoing relationships. Remaining edges reference a missing endpoint, and
+`delete_relationship` rejects missing endpoints. For clean removal, delete
+incident relationships **before** deleting their endpoint entities, and verify
+the results. A bounded relationship listing cannot prove complete cleanup when
+some relationships were not returned.
+
+```python
+# Only after relevant relationships have been removed and checked:
 result = memory.delete_entity("user1")
+# Existing entity: {"success": True}; missing entity: success=False.
+# This response does not include deleted_count.
 ```
 
 ## Memory Organization Tips
 
 1. **Entity Naming**
-   - Use descriptive prefixes (user_, fact_, rel_)
+   - Use descriptive entity prefixes (user_, fact_, decision_, constraint_)
    - Include category markers in names
    - Keep names unique but readable
    - Use consistent categorization format
@@ -261,10 +312,11 @@ result = memory.delete_entity("user1")
    - Maintain context history
 
 5. **Relationships**
-   - Create explicit relationship entities
-   - Use bidirectional relationships when needed
-   - Include relationship metadata
-   - Track relationship discovery context
+   - Create explicit edges with create_relationship, not duplicate relationship entities
+   - Read edges with get_relationships and remove them with delete_relationship
+   - Each edge is directed; create a reverse edge only when it has useful meaning
+   - Include supported metadata as type:key=value properties
+   - Remove incident edges before deleting or renaming their endpoint entities
 
 6. **Memory Maintenance**
    - Update outdated information
